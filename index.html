@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD Editor</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: #fff; }
+    #editor { height: 100vh; }
+    /* hide bottom status bar */
+    .vditor-info { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="editor"></div>
+  <script src="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"></script>
+  <script>
+    new Vditor('editor', {
+      mode: 'wysiwyg',
+      toolbar: [],
+      toolbarConfig: { hide: true },
+      height: window.innerHeight,
+      placeholder: '마크다운으로 작성하세요  (#, ##, **, *, >, -, ` 등)',
+      counter: { enable: false },
+      resize: { enable: false },
+      cache: { enable: false },
+    });
+
+    window.addEventListener('resize', () => {
+      document.querySelector('.vditor').style.height = window.innerHeight + 'px';
+    });
+  </script>
+</body>
+</html>
