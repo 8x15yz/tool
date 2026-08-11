@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>ICS 일정 뷰어</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="home-link" href="./index.html">← 홈</a>
+      <div class="topbar-meta">
+        <p class="eyebrow">STATIC · CLIENT ONLY</p>
+        <h1>ICS 일정 뷰어</h1>
+        <p class="subtitle">Outlook / Teams / Google Calendar의 .ics 파일을 브라우저에서 바로 읽습니다.</p>
+      </div>
+      <label class="button primary" for="fileInput">ICS 파일 열기</label>
+      <input id="fileInput" type="file" accept=".ics,text/calendar" hidden />
+    </header>
+
+    <section id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="ICS 파일 불러오기">
+      <div class="drop-icon">↓</div>
+      <strong>.ics 파일을 여기에 놓으세요</strong>
+      <span>또는 위의 “ICS 파일 열기” 버튼을 사용하세요.</span>
+    </section>
+
+    <section id="errorBox" class="error-box hidden" aria-live="polite"></section>
+
+    <section id="workspace" class="workspace hidden">
+      <aside class="event-sidebar">
+        <div class="sidebar-header">
+          <span>일정</span>
+          <span id="eventCount" class="badge">0</span>
+        </div>
+        <div id="eventList" class="event-list"></div>
+      </aside>
+
+      <article class="event-detail">
+        <div class="detail-actions">
+          <span id="sourceName" class="source-name"></span>
+          <button id="copyRawButton" class="button ghost" type="button">원문 복사</button>
+        </div>
+
+        <div id="eventContent"></div>
+
+        <details class="raw-panel">
+          <summary>원본 ICS 보기</summary>
+          <pre id="rawText"></pre>
+        </details>
+      </article>
+    </section>
+
+    <footer>
+      파일은 서버로 업로드되지 않고 현재 브라우저 안에서만 처리됩니다.
+    </footer>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
