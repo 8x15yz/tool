@@ -267,6 +267,85 @@ h1 {
   border: 1px solid var(--border);
 }
 
+/* time display */
+.time-original { font-weight: 500; }
+
+.time-tz {
+  display: inline-block;
+  margin-left: .4rem;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: .08rem .38rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.time-local {
+  margin-top: .22rem;
+  font-size: .78rem;
+  color: var(--accent);
+}
+
+/* meeting join */
+.meeting-block { display: inline-block; }
+
+.meeting-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.meeting-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .42rem .95rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 7px;
+  text-decoration: none;
+  font-size: .82rem;
+  font-weight: 600;
+  transition: background .15s;
+}
+.meeting-link:hover { background: #4338ca; }
+
+.copy-link-btn {
+  padding: .42rem .75rem;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  white-space: nowrap;
+}
+.copy-link-btn:hover { background: var(--bg); color: var(--text); }
+.copy-link-btn.copied { background: #f0fdf4; color: #16a34a; border-color: #86efac; }
+
+.meeting-meta {
+  margin-top: .4rem;
+  font-size: .75rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 1.2rem;
+}
+
+.meta-label {
+  font-weight: 700;
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-right: .2rem;
+}
+
 /* raw panel */
 .raw-panel {
   margin-top: 1.5rem;
