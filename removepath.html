@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>removepath - HTML 태그 및 스타일 제거 도구</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8f9fa;
+      color: #333;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #111;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    textarea {
+      width: 100%;
+      height: 350px;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #0066ff;
+    }
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background-color: #0066ff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #0052cc;
+    }
+    button.secondary {
+      background-color: #6c757d;
+    }
+    button.secondary:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>HTML 태그 및 스타일 제거 (removepath)</h1>
+    
+    <div class="grid">
+      <div>
+        <label for="inputHtml">원본 HTML / 스타일 태그 포함 코드</label>
+        <textarea id="inputHtml" placeholder="여기에 HTML 소스 코드를 붙여넣으세요..."></textarea>
+      </div>
+      <div>
+        <label for="outputText">추출된 순수 원문 텍스트</label>
+        <textarea id="outputText" readonly placeholder="결과가 여기에 표시됩니다..."></textarea>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button onclick="extractText()">텍스트 추출하기</button>
+      <button class="secondary" onclick="copyResult()">결과 복사하기</button>
+    </div>
+  </div>
+
+  <script>
+    function extractText() {
+      const input = document.getElementById('inputHtml').value;
+      
+      // DOMParser를 이용해 HTML 구조 파싱
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(input, 'text/html');
+
+      // imageblock 내부의 figcaption 텍스트 추출 보존을 위한 처리
+      // innerText 사용 시 시각적 줄바꿈 및 불필요한 연속 공백 정돈
+      let rawText = doc.body.innerText;
+
+      // 연속된 다중 빈 줄(3개 이상)을 최대 2개로 줄이기
+      const cleanedText = rawText
+        .split('\n')
+        .map(line => line.trim())
+        .filter((line, index, arr) => {
+          // 연속된 빈 줄 제거
+          return line !== '' || (index > 0 && arr[index - 1] !== '');
+        })
+        .join('\n');
+
+      document.getElementById('outputText').value = cleanedText;
+    }
+
+    function copyResult() {
+      const output = document.getElementById('outputText');
+      if (!output.value) return;
+      
+      output.select();
+      navigator.clipboard.writeText(output.value);
+      alert('클립보드에 복사되었습니다.');
+    }
+  </script>
+
+</body>
+</html>
