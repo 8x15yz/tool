@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>removepath - HTML 태그 제거 및 계층 들여쓰기 변환</title>
+  <title>removepath - HTML 태그 제거 및 줄바꿈 정리</title>
   <style>
     * {
       box-sizing: border-box;
@@ -62,10 +62,10 @@
       padding: 1rem;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
-      font-family: monospace;
-      font-size: 0.875rem;
+      font-family: inherit;
+      font-size: 0.9rem;
       resize: vertical;
-      white-space: pre;
+      line-height: 1.6;
     }
     textarea:focus {
       outline: none;
@@ -118,8 +118,8 @@
     </div>
 
     <header>
-      <h1>🧹 HTML 태그 제거 및 들여쓰기 변환</h1>
-      <p class="desc">HTML 요소의 구조 depth에 따라 들여쓰기(Tab)를 적용하고 &lt;br&gt; 태그 시 추가 들여쓰기를 넣습니다.</p>
+      <h1>🧹 HTML 태그 제거 및 줄바꿈 변환</h1>
+      <p class="desc">태그 단위로 엔터(줄바꿈)를 넣고, &lt;br&gt; 태그 위치에는 빈 줄(엔터 2번)을 추가합니다.</p>
     </header>
     
     <div class="grid">
@@ -128,7 +128,7 @@
         <textarea id="inputHtml" placeholder="여기에 HTML 소스 코드를 붙여넣으세요..."></textarea>
       </div>
       <div>
-        <label for="outputText">들여쓰기 적용된 텍스트 결과</label>
+        <label for="outputText">변환된 텍스트 결과</label>
         <textarea id="outputText" readonly placeholder="결과가 여기에 표시됩니다..."></textarea>
       </div>
     </div>
@@ -150,37 +150,37 @@
       const parser = new DOMParser();
       const doc = parser.parseFromString(input, 'text/html');
 
-      let lines = [];
+      let resultText = '';
 
-      // 재귀적으로 DOM 노드를 순회하면서 depth 계산
-      function traverse(node, depth, extraIndent = 0) {
+      function traverse(node) {
         node.childNodes.forEach(child => {
           if (child.nodeType === Node.TEXT_NODE) {
             const text = child.textContent.trim();
             if (text.length > 0) {
-              const indent = '\t'.repeat(depth + extraIndent);
-              lines.push(indent + text);
+              // 텍스트 블록 뒤에 기본 엔터(줄바꿈) 추가
+              resultText += text + '\n';
             }
           } else if (child.nodeType === Node.ELEMENT_NODE) {
             const tagName = child.tagName.toLowerCase();
 
             if (tagName === 'br') {
-              // <br> 태그를 만났을 때 다음 텍스트에 1단계 추가 들여쓰기 부여
-              extraIndent += 1;
+              // <br> 태그를 만나면 엔터 한 번 더 (한 줄 띄움)
+              resultText += '\n';
             } else if (tagName === 'script' || tagName === 'style') {
-              // 스크립트 및 스타일 내부 요소는 무시
               return;
             } else {
-              // 일반 요소 태그 진입 시 depth + 1
-              traverse(child, depth + 1, extraIndent);
+              traverse(child);
             }
           }
         });
       }
 
-      traverse(doc.body, 0, 0);
+      traverse(doc.body);
 
-      document.getElementById('outputText').value = lines.join('\n');
+      // 불필요하게 연속된 빈 줄(3개 이상)은 깔끔하게 최대 2개로 정리
+      const cleanedText = resultText.replace(/\n{3,}/g, '\n\n').trim();
+
+      document.getElementById('outputText').value = cleanedText;
     }
 
     function copyResult() {
@@ -192,7 +192,7 @@
       alert('클립보드에 복사되었습니다.');
     }
 
-    // 입력값이 바뀌면 실시간으로 바로 변환되도록 처리
+    // 입력 시 실시간 변환
     document.getElementById('inputHtml').addEventListener('input', processHtml);
   </script>
 
