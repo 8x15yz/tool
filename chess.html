@@ -9,213 +9,486 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f4f5f7;
-      --surface: #ffffff;
-      --border: #e2e8f0;
-      --text: #1a202c;
-      --text-muted: #718096;
-      --accent: #4f46e5;
+      --pink:       #f06292;
+      --pink-light: #fce4ec;
+      --pink-mid:   #f8bbd0;
+      --dark-card:  #2d2d3a;
+      --text:       #3d1f4e;
+      --text-muted: #9b89a8;
+      --surface:    rgba(255,255,255,0.78);
+      --border:     rgba(255,255,255,0.65);
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
+      background: linear-gradient(135deg, #e8d5f7 0%, #fcd5e8 100%);
+      background-attachment: fixed;
       color: var(--text);
       min-height: 100vh;
-      padding: 1.5rem;
     }
 
-    .back {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      font-size: .825rem;
-      color: var(--text-muted);
-      text-decoration: none;
-      margin-bottom: 1.2rem;
-    }
-    .back:hover { color: var(--accent); }
-
-    h1 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -.03em;
-      margin-bottom: 1.2rem;
-    }
-
-    .layout {
+    .app {
       display: flex;
-      gap: 1.5rem;
+      min-height: 100vh;
+      padding: 1.5rem;
+      gap: 1.25rem;
       align-items: flex-start;
-      flex-wrap: wrap;
     }
 
-    #board {
-      width: min(480px, calc(100vw - 3rem));
+    /* ── Left Panel ───────────────────────────────── */
+    .left-panel {
+      width: 230px;
       flex-shrink: 0;
-    }
-
-    .panel {
-      flex: 1 1 200px;
       display: flex;
       flex-direction: column;
       gap: .9rem;
-      min-width: 200px;
-      max-width: 280px;
     }
+
+    .brand h1 {
+      font-size: 1.9rem;
+      font-weight: 900;
+      color: var(--pink);
+      letter-spacing: -.05em;
+    }
+
+    .brand p {
+      font-size: .7rem;
+      color: var(--text-muted);
+      margin-top: .1rem;
+    }
+
+    .back {
+      font-size: .72rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .back:hover { color: var(--pink); }
 
     .card {
       background: var(--surface);
+      backdrop-filter: blur(14px);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.1rem 1.2rem;
+      border-radius: 16px;
+      padding: .95rem 1.05rem;
+      box-shadow: 0 2px 14px rgba(180,80,130,.07);
     }
 
-    .card-title {
-      font-size: .72rem;
+    .card-label {
+      font-size: .67rem;
       font-weight: 700;
-      letter-spacing: .07em;
+      letter-spacing: .09em;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: .75rem;
+      margin-bottom: .6rem;
     }
 
-    .seg {
+    .mode-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .45rem;
+    }
+
+    .mode-btn {
       display: flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .seg button {
-      flex: 1;
-      padding: .42rem .5rem;
-      border: none;
-      background: none;
-      font-size: .8rem;
-      font-weight: 600;
+      flex-direction: column;
+      align-items: center;
+      gap: .25rem;
+      padding: .55rem .4rem;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      background: var(--pink-light);
       cursor: pointer;
+      font-size: .72rem;
+      font-weight: 700;
       color: var(--text-muted);
-      transition: background .12s, color .12s;
+      transition: all .15s;
     }
 
-    .seg button + button { border-left: 1px solid var(--border); }
+    .mode-btn .icon { font-size: 1rem; }
+    .mode-btn.active { background: var(--pink); color: #fff; }
 
-    .seg button.active {
-      background: var(--accent);
-      color: #fff;
+    .diff-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: .35rem;
     }
 
-    .color-row {
+    .diff-btn {
       display: flex;
-      gap: .5rem;
-      margin-top: .7rem;
+      flex-direction: column;
+      align-items: center;
+      gap: .2rem;
+      padding: .5rem .2rem;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background: var(--pink-light);
+      cursor: pointer;
+      font-size: .68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all .15s;
+    }
+
+    .diff-btn .icon { font-size: .95rem; }
+    .diff-btn.active { background: var(--pink); color: #fff; }
+
+    .color-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .45rem;
     }
 
     .color-btn {
-      flex: 1;
-      padding: .38rem .4rem;
-      border: 2px solid var(--border);
-      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .3rem;
+      padding: .42rem .3rem;
+      border: 2px solid var(--pink-mid);
+      border-radius: 10px;
       background: none;
       cursor: pointer;
-      font-size: .78rem;
-      font-weight: 600;
+      font-size: .72rem;
+      font-weight: 700;
       color: var(--text-muted);
-      transition: border-color .12s, color .12s;
+      transition: all .15s;
     }
 
     .color-btn.active {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .status-text {
-      font-size: .9rem;
-      font-weight: 700;
-    }
-
-    .status-text.check { color: #d97706; }
-    .status-text.over  { color: #059669; }
-
-    .thinking-text {
-      font-size: .75rem;
-      color: var(--accent);
-      margin-top: .25rem;
-      min-height: 1.1em;
+      border-color: var(--pink);
+      color: var(--pink);
+      background: var(--pink-light);
     }
 
     .btn-new {
       width: 100%;
-      padding: .6rem;
-      background: var(--accent);
+      padding: .72rem;
+      background: var(--pink);
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 14px;
       font-size: .875rem;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
-      transition: opacity .15s;
+      transition: opacity .15s, transform .1s;
+      box-shadow: 0 4px 18px rgba(240,98,146,.32);
     }
 
-    .btn-new:hover { opacity: .85; }
+    .btn-new:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-new:active { transform: translateY(0); }
+
+    /* ── Center ───────────────────────────────────── */
+    .center {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .board-wrap {
+      background: rgba(255,255,255,0.55);
+      border-radius: 22px;
+      padding: .8rem;
+      box-shadow: 0 10px 48px rgba(180,80,120,.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+    }
+
+    #board {
+      width: clamp(280px, calc(100vw - 620px), 540px);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Board square colors */
+    .white-1e1d7 { background-color: #fce4ec; }
+    .black-3c85d { background-color: #f48fb1; }
+
+    /* Highlights */
+    .sq-selected { background-color: rgba(240, 98, 146, 0.55) !important; }
+    .sq-valid    { background-color: rgba(240, 98, 146, 0.30) !important; }
+    .square-55d63 { cursor: pointer; }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      background: var(--surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: .7rem 1.1rem;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 2px 12px rgba(200,100,150,.07);
+    }
+
+    .status-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    .status-texts { flex: 1; min-width: 0; }
+
+    .status-main {
+      font-size: .855rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .status-main.check { color: #c0392b; }
+    .status-main.over  { color: var(--pink); }
+
+    .status-sub {
+      font-size: .7rem;
+      color: var(--text-muted);
+      margin-top: .08rem;
+    }
+
+    .thinking-badge {
+      font-size: .7rem;
+      color: var(--pink);
+      font-weight: 700;
+      padding: .22rem .6rem;
+      background: var(--pink-light);
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Right Panel ──────────────────────────────── */
+    .right-panel {
+      width: 230px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+    }
+
+    .player-card {
+      border-radius: 16px;
+      padding: .85rem .95rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      transition: box-shadow .2s;
+    }
+
+    .player-card.light-card {
+      background: var(--pink-light);
+      border: 1px solid var(--pink-mid);
+    }
+
+    .player-card.dark-card {
+      background: var(--dark-card);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .player-card.active-turn.light-card {
+      box-shadow: 0 0 0 2.5px var(--pink), 0 4px 20px rgba(240,98,146,.22);
+    }
+
+    .player-card.active-turn.dark-card {
+      box-shadow: 0 0 0 2.5px #a78bfa, 0 4px 20px rgba(167,139,250,.18);
+    }
+
+    .player-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .dark-card .player-avatar { background: rgba(255,255,255,.1); }
+
+    .player-info { flex: 1; min-width: 0; }
+
+    .player-name {
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .dark-card .player-name { color: #f0f0f5; }
+
+    .player-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      margin-top: .3rem;
+      background: rgba(0,0,0,.09);
+      border-radius: 20px;
+      padding: .18rem .55rem;
+      font-size: .77rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .dark-card .player-timer {
+      background: rgba(0,0,0,.35);
+      color: #e8e8f0;
+    }
+
+    .player-timer.low { color: #c0392b !important; }
+
+    .history-card {
+      flex: 1;
+      background: var(--surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: .95rem 1rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
+      box-shadow: 0 2px 14px rgba(180,80,130,.07);
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .6rem;
+    }
+
+    .history-label {
+      font-size: .67rem;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
 
     .moves-list {
-      font-size: .78rem;
-      line-height: 1.9;
-      max-height: 190px;
+      flex: 1;
+      font-size: .76rem;
+      line-height: 1.95;
       overflow-y: auto;
       color: var(--text-muted);
       word-break: break-word;
     }
 
-    .moves-list b { color: var(--text); }
+    .moves-list b { color: var(--text); font-weight: 600; }
+
+    .no-moves {
+      font-size: .76rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding-top: 1.2rem;
+    }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 900px) {
+      .app { flex-direction: column; align-items: center; padding: 1rem; }
+      .left-panel, .right-panel { width: 100%; max-width: 480px; flex-direction: row; flex-wrap: wrap; gap: .7rem; }
+      .left-panel .card, .left-panel .btn-new { flex: 1 1 180px; }
+      .right-panel { flex-direction: row; }
+      .player-card { flex: 1 1 140px; }
+      .history-card { flex: 1 1 100%; }
+      #board { width: min(480px, calc(100vw - 2.5rem)); }
+    }
   </style>
 </head>
 <body>
+<div class="app">
 
-<a class="back" href="./index.html">← 돌아가기</a>
-<h1>♟ Chess</h1>
+  <!-- ── Left Panel ── -->
+  <aside class="left-panel">
+    <div class="brand">
+      <h1>♟ Chess</h1>
+      <p>전략으로 승리를 차지하세요!</p>
+    </div>
 
-<div class="layout">
-  <div id="board"></div>
-
-  <div class="panel">
+    <a class="back" href="./index.html">← 돌아가기</a>
 
     <div class="card">
-      <div class="card-title">게임 모드</div>
-      <div class="seg">
-        <button id="btn-ai" class="active" onclick="setMode('ai')">vs AI</button>
-        <button id="btn-2p" onclick="setMode('2p')">2인 대전</button>
-      </div>
-      <div class="color-row" id="color-row">
-        <button class="color-btn active" id="btn-white" onclick="setColor('white')">⬜ 백</button>
-        <button class="color-btn" id="btn-black" onclick="setColor('black')">⬛ 흑</button>
+      <div class="card-label">게임 모드</div>
+      <div class="mode-btns">
+        <button class="mode-btn active" id="btn-ai" onclick="setMode('ai')">
+          <span class="icon">⭐</span>vs AI
+        </button>
+        <button class="mode-btn" id="btn-2p" onclick="setMode('2p')">
+          <span class="icon">👥</span>2인 대전
+        </button>
       </div>
     </div>
 
     <div class="card" id="diff-card">
-      <div class="card-title">AI 난이도</div>
-      <div class="seg">
-        <button id="btn-easy"   onclick="setDiff('easy')">쉬움</button>
-        <button id="btn-medium" class="active" onclick="setDiff('medium')">보통</button>
-        <button id="btn-hard"   onclick="setDiff('hard')">어려움</button>
+      <div class="card-label">AI 난이도</div>
+      <div class="diff-btns">
+        <button class="diff-btn" id="btn-easy" onclick="setDiff('easy')">
+          <span class="icon">🌱</span>쉬움
+        </button>
+        <button class="diff-btn active" id="btn-medium" onclick="setDiff('medium')">
+          <span class="icon">⭐</span>보통
+        </button>
+        <button class="diff-btn" id="btn-hard" onclick="setDiff('hard')">
+          <span class="icon">👑</span>어려움
+        </button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="status-text" id="status">백 차례</div>
-      <div class="thinking-text" id="thinking"></div>
+    <div class="card" id="color-card">
+      <div class="card-label">기물 색상</div>
+      <div class="color-btns">
+        <button class="color-btn active" id="btn-white" onclick="setColor('white')">♙ 백</button>
+        <button class="color-btn" id="btn-black" onclick="setColor('black')">♟ 흑</button>
+      </div>
     </div>
 
-    <button class="btn-new" onclick="newGame()">새 게임</button>
+    <button class="btn-new" onclick="newGame()">♥ 새 게임</button>
+  </aside>
 
-    <div class="card">
-      <div class="card-title">기보</div>
-      <div class="moves-list" id="moves">—</div>
+  <!-- ── Center ── -->
+  <main class="center">
+    <div class="board-wrap">
+      <div id="board"></div>
     </div>
 
-  </div>
+    <div class="status-bar">
+      <span class="status-icon" id="status-icon">✨</span>
+      <div class="status-texts">
+        <div class="status-main" id="status">새 게임을 시작해보세요!</div>
+        <div class="status-sub" id="status-sub">당신의 첫 수를 기다리고 있어요.</div>
+      </div>
+      <span class="thinking-badge" id="thinking" style="display:none">⏳ 생각 중...</span>
+    </div>
+  </main>
+
+  <!-- ── Right Panel ── -->
+  <aside class="right-panel">
+    <div class="player-card light-card active-turn" id="card-w">
+      <div class="player-avatar">♙</div>
+      <div class="player-info">
+        <div class="player-name" id="name-w">나 (백)</div>
+        <div class="player-timer" id="timer-w">⏱ 15:00</div>
+      </div>
+    </div>
+
+    <div class="history-card">
+      <div class="history-header">
+        <div class="history-label">기보</div>
+        <span>📋</span>
+      </div>
+      <div class="moves-list" id="moves">
+        <div class="no-moves">새 게임을 시작해보세요!</div>
+      </div>
+    </div>
+
+    <div class="player-card dark-card" id="card-b">
+      <div class="player-avatar">♟</div>
+      <div class="player-info">
+        <div class="player-name" id="name-b">AI (흑)</div>
+        <div class="player-timer" id="timer-b">⏱ 15:00</div>
+      </div>
+    </div>
+  </aside>
+
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -226,6 +499,9 @@
 
 let game, board, engine, engineReady = false, engineThinking = false;
 let gameMode = 'ai', playerColor = 'white', difficulty = 'medium';
+let selectedSquare = null;
+let timers = { w: 900, b: 900 };
+let timerInterval = null;
 
 const DIFF = {
   easy:   { skill: 3,  movetime: 300 },
@@ -233,7 +509,44 @@ const DIFF = {
   hard:   { skill: 20, movetime: 2000 },
 };
 
-// ── Engine (Stockfish via blob worker) ─────────────────────────────────────
+// ── Timer ──────────────────────────────────────────────────────────────────
+
+function fmt(s) {
+  return `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+}
+
+function startClock() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (game.game_over()) { clearInterval(timerInterval); return; }
+    const t = game.turn();
+    if (timers[t] > 0) timers[t]--;
+    renderTimers();
+    if (timers[t] === 0) {
+      clearInterval(timerInterval);
+      const winner = t === 'w' ? '흑' : '백';
+      setStatus(`시간 초과 — ${winner} 승리!`, 'over', '⏰', '');
+      ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    }
+  }, 1000);
+}
+
+function renderTimers() {
+  const wEl = document.getElementById('timer-w');
+  const bEl = document.getElementById('timer-b');
+  wEl.textContent = `⏱ ${fmt(timers.w)}`;
+  bEl.textContent = `⏱ ${fmt(timers.b)}`;
+  wEl.classList.toggle('low', timers.w <= 30);
+  bEl.classList.toggle('low', timers.b <= 30);
+
+  if (!game.game_over()) {
+    const t = game.turn();
+    document.getElementById('card-w').classList.toggle('active-turn', t === 'w');
+    document.getElementById('card-b').classList.toggle('active-turn', t === 'b');
+  }
+}
+
+// ── Engine ─────────────────────────────────────────────────────────────────
 
 function initEngine() {
   try {
@@ -252,12 +565,14 @@ function handleEngineMsg(e) {
   if (line.startsWith('bestmove')) {
     engineThinking = false;
     setThinking(false);
+    clearHighlights();
     const mv = line.split(' ')[1];
     if (mv && mv !== '(none)') {
-      game.move({ from: mv.slice(0, 2), to: mv.slice(2, 4), promotion: mv[4] || 'q' });
+      game.move({ from: mv.slice(0,2), to: mv.slice(2,4), promotion: mv[4] || 'q' });
       board.position(game.fen());
       updateStatus();
       updateMoves();
+      renderTimers();
     }
   }
 }
@@ -277,80 +592,144 @@ function askEngine() {
 function initBoard() {
   game = new Chess();
   board = Chessboard('board', {
-    draggable: true,
+    draggable: false,
     position: 'start',
     orientation: 'white',
-    pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png',
-    onDragStart, onDrop, onSnapEnd,
+    pieceTheme: './img/pieces/{piece}.png',
   });
+
+  $(document).on('click', '.square-55d63', function () {
+    onSquareClick($(this).data('square'));
+  });
+
+  window.addEventListener('resize', () => board.resize());
 }
 
-function onDragStart(source, piece) {
-  if (game.game_over() || engineThinking) return false;
+function onSquareClick(square) {
+  if (game.game_over() || engineThinking) return;
   const t = game.turn();
-  if (gameMode === 'ai' && t !== playerColor[0]) return false;
-  if (t === 'w' && piece[0] === 'b') return false;
-  if (t === 'b' && piece[0] === 'w') return false;
-  return true;
+  if (gameMode === 'ai' && t !== playerColor[0]) return;
+
+  const piece = game.get(square);
+
+  if (!selectedSquare) {
+    if (piece && piece.color === t) {
+      selectedSquare = square;
+      highlightSquare(square);
+    }
+    return;
+  }
+
+  if (square === selectedSquare) {
+    clearHighlights();
+    selectedSquare = null;
+    return;
+  }
+
+  if (piece && piece.color === t) {
+    clearHighlights();
+    selectedSquare = square;
+    highlightSquare(square);
+    return;
+  }
+
+  const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+  clearHighlights();
+  selectedSquare = null;
+
+  if (move) {
+    board.position(game.fen());
+    updateStatus();
+    updateMoves();
+    renderTimers();
+    if (gameMode === 'ai' && !game.game_over()) setTimeout(askEngine, 200);
+  }
 }
 
-function onDrop(source, target) {
-  const move = game.move({ from: source, to: target, promotion: 'q' });
-  if (!move) return 'snapback';
-  updateStatus();
-  updateMoves();
-  if (gameMode === 'ai' && !game.game_over()) setTimeout(askEngine, 200);
+function highlightSquare(square) {
+  $(`[data-square="${square}"]`).addClass('sq-selected');
+  game.moves({ square, verbose: true }).forEach(m =>
+    $(`[data-square="${m.to}"]`).addClass('sq-valid')
+  );
 }
 
-function onSnapEnd() { board.position(game.fen()); }
+function clearHighlights() {
+  $('.sq-selected, .sq-valid').removeClass('sq-selected sq-valid');
+}
 
 // ── UI ─────────────────────────────────────────────────────────────────────
 
+function setStatus(txt, cls, icon, sub) {
+  document.getElementById('status').textContent = txt;
+  document.getElementById('status').className = 'status-main' + (cls ? ' ' + cls : '');
+  document.getElementById('status-icon').textContent = icon || '✨';
+  document.getElementById('status-sub').textContent = sub ?? '';
+}
+
 function updateStatus() {
-  const el = document.getElementById('status');
   const turn = game.turn() === 'w' ? '백 (White)' : '흑 (Black)';
-  let txt = '', cls = '';
 
   if (game.in_checkmate()) {
     const winner = game.turn() === 'w' ? '흑 승리!' : '백 승리!';
-    txt = `체크메이트 — ${winner}`; cls = 'over';
+    setStatus(`체크메이트 — ${winner}`, 'over', '🎉', '수고했어요!');
+    clearInterval(timerInterval);
+    ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
   } else if (game.in_draw()) {
-    txt = '무승부'; cls = 'over';
-    if (game.in_stalemate())                 txt += ' (스테일메이트)';
-    else if (game.in_threefold_repetition()) txt += ' (3회 반복)';
-    else if (game.insufficient_material())   txt += ' (기물 부족)';
+    let sub = game.in_stalemate() ? '스테일메이트' :
+              game.in_threefold_repetition() ? '3회 반복' :
+              game.insufficient_material() ? '기물 부족' : '';
+    setStatus('무승부', 'over', '🤝', sub);
+    clearInterval(timerInterval);
+    ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
   } else {
-    txt = `${turn} 차례`;
-    if (game.in_check()) { txt += ' · 체크!'; cls = 'check'; }
+    const check = game.in_check();
+    setStatus(
+      `${turn} 차례${check ? ' · 체크!' : ''}`,
+      check ? 'check' : '',
+      check ? '⚠️' : '♟',
+      check ? '체크 상태입니다!' : ''
+    );
   }
-
-  el.textContent = txt;
-  el.className = 'status-text ' + cls;
 }
 
 function setThinking(on) {
-  document.getElementById('thinking').textContent = on ? '⏳ AI 생각 중...' : '';
+  document.getElementById('thinking').style.display = on ? '' : 'none';
 }
 
 function updateMoves() {
   const h = game.history();
   const el = document.getElementById('moves');
-  if (!h.length) { el.innerHTML = '—'; return; }
+  if (!h.length) { el.innerHTML = '<div class="no-moves">아직 없어요</div>'; return; }
   let html = '';
   for (let i = 0; i < h.length; i += 2) {
     const n = i / 2 + 1;
-    html += `${n}. <b>${h[i]}</b>${h[i + 1] ? ' <b>' + h[i + 1] + '</b>' : ''} `;
+    html += `${n}. <b>${h[i]}</b>${h[i+1] ? ' <b>'+h[i+1]+'</b>' : ''} `;
   }
   el.innerHTML = html;
   el.scrollTop = el.scrollHeight;
 }
 
+function updatePlayerNames() {
+  if (gameMode === '2p') {
+    document.getElementById('name-w').textContent = '백';
+    document.getElementById('name-b').textContent = '흑';
+  } else if (playerColor === 'white') {
+    document.getElementById('name-w').textContent = '나 (백)';
+    document.getElementById('name-b').textContent = 'AI (흑)';
+  } else {
+    document.getElementById('name-w').textContent = 'AI (백)';
+    document.getElementById('name-b').textContent = '나 (흑)';
+  }
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+
 function setMode(m) {
   gameMode = m;
   document.getElementById('btn-ai').classList.toggle('active', m === 'ai');
   document.getElementById('btn-2p').classList.toggle('active', m === '2p');
-  document.getElementById('color-row').style.display = m === 'ai' ? '' : 'none';
-  document.getElementById('diff-card').style.display = m === 'ai' ? '' : 'none';
+  document.getElementById('color-card').style.display = m === 'ai' ? '' : 'none';
+  document.getElementById('diff-card').style.display  = m === 'ai' ? '' : 'none';
   newGame();
 }
 
@@ -363,26 +742,33 @@ function setColor(c) {
 
 function setDiff(d) {
   difficulty = d;
-  ['easy', 'medium', 'hard'].forEach(x =>
-    document.getElementById('btn-' + x).classList.toggle('active', x === d)
+  ['easy','medium','hard'].forEach(x =>
+    document.getElementById('btn-'+x).classList.toggle('active', x === d)
   );
 }
 
 function newGame() {
+  clearInterval(timerInterval);
   if (engine && engineThinking) { engine.postMessage('stop'); engineThinking = false; }
   game = new Chess();
+  timers = { w: 900, b: 900 };
+  clearHighlights();
+  selectedSquare = null;
   board.orientation(gameMode === 'ai' ? playerColor : 'white');
   board.position('start');
-  updateStatus();
-  updateMoves();
+  updatePlayerNames();
+  renderTimers();
   setThinking(false);
+  setStatus('새 게임을 시작해보세요!', '', '✨', '당신의 첫 수를 기다리고 있어요.');
+  updateMoves();
+  startClock();
   if (gameMode === 'ai' && playerColor === 'black') setTimeout(askEngine, 500);
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
 initEngine();
 initBoard();
-updateStatus();
+newGame();
 </script>
 </body>
 </html>
