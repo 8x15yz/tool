@@ -197,7 +197,7 @@
     }
 
     #board {
-      width: clamp(280px, calc(100vw - 620px), 540px);
+      width: clamp(320px, calc(100vw - 520px), 660px);
       border-radius: 8px;
       overflow: hidden;
     }
@@ -382,6 +382,104 @@
       padding-top: 1.2rem;
     }
 
+    /* ── Captured Pieces ──────────────────────────── */
+    .captured-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: .05rem;
+      margin-top: .28rem;
+      min-height: 1.1rem;
+      font-size: .88rem;
+      line-height: 1;
+    }
+
+    .score-adv {
+      font-size: .68rem;
+      font-weight: 800;
+      color: var(--pink);
+      margin-left: .3rem;
+      background: rgba(240,98,146,.14);
+      border-radius: 6px;
+      padding: .05rem .28rem;
+    }
+
+    .dark-card .score-adv {
+      color: #c4b5fd;
+      background: rgba(196,181,253,.15);
+    }
+
+    /* ── Game Over Overlay ────────────────────────── */
+    @keyframes overlay-in  { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes card-in     { from { opacity: 0; transform: translate(-50%,-50%) scale(.78) } to { opacity: 1; transform: translate(-50%,-50%) scale(1) } }
+    @keyframes trophy-pop  { 0%{transform:scale(0) rotate(-20deg)} 60%{transform:scale(1.25) rotate(8deg)} 100%{transform:scale(1) rotate(0)} }
+    @keyframes shimmer     { 0%,100%{opacity:1} 50%{opacity:.65} }
+
+    .game-over-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(61,31,78,.45);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      animation: overlay-in .25s ease;
+    }
+
+    .game-over-overlay.show { display: block; }
+
+    .game-over-card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: #fff;
+      border-radius: 28px;
+      padding: 2.4rem 2.8rem;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(61,31,78,.28);
+      animation: card-in .35s cubic-bezier(.34,1.56,.64,1);
+      min-width: 300px;
+    }
+
+    .game-over-trophy {
+      font-size: 4rem;
+      display: block;
+      margin-bottom: .5rem;
+      animation: trophy-pop .55s .2s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    .game-over-title {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--pink);
+      letter-spacing: -.04em;
+      margin-bottom: .3rem;
+    }
+
+    .game-over-winner {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1.6rem;
+      animation: shimmer 1.8s 1s ease-in-out infinite;
+    }
+
+    .game-over-btn {
+      display: inline-block;
+      padding: .7rem 2rem;
+      background: var(--pink);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: .9rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(240,98,146,.38);
+      transition: opacity .15s, transform .1s;
+    }
+
+    .game-over-btn:hover { opacity: .88; transform: translateY(-1px); }
+
     /* ── Responsive ───────────────────────────────── */
     @media (max-width: 900px) {
       .app { flex-direction: column; align-items: center; padding: 1rem; }
@@ -467,6 +565,7 @@
       <div class="player-info">
         <div class="player-name" id="name-w">나 (백)</div>
         <div class="player-timer" id="timer-w">⏱ 15:00</div>
+        <div class="captured-row" id="captured-w"></div>
       </div>
     </div>
 
@@ -485,10 +584,21 @@
       <div class="player-info">
         <div class="player-name" id="name-b">AI (흑)</div>
         <div class="player-timer" id="timer-b">⏱ 15:00</div>
+        <div class="captured-row" id="captured-b"></div>
       </div>
     </div>
   </aside>
 
+</div>
+
+<!-- Game Over Overlay -->
+<div class="game-over-overlay" id="game-over-overlay">
+  <div class="game-over-card">
+    <span class="game-over-trophy" id="game-over-trophy">🏆</span>
+    <div class="game-over-title" id="game-over-title">체크메이트!</div>
+    <div class="game-over-winner" id="game-over-winner">백 승리</div>
+    <button class="game-over-btn" onclick="newGame()">♥ 새 게임</button>
+  </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -502,12 +612,41 @@ let gameMode = 'ai', playerColor = 'white', difficulty = 'medium';
 let selectedSquare = null;
 let timers = { w: 900, b: 900 };
 let timerInterval = null;
+let capturedByW = []; // white가 잡은 흑 기물
+let capturedByB = []; // black이 잡은 백 기물
+
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+const PIECE_ORDER  = { q: 0, r: 1, b: 2, n: 3, p: 4 };
+const SYM_BLACK    = { p:'♟', n:'♞', b:'♝', r:'♜', q:'♛' };
+const SYM_WHITE    = { p:'♙', n:'♘', b:'♗', r:'♖', q:'♕' };
 
 const DIFF = {
   easy:   { skill: 3,  movetime: 300 },
   medium: { skill: 10, movetime: 800 },
   hard:   { skill: 20, movetime: 2000 },
 };
+
+// ── Captures ───────────────────────────────────────────────────────────────
+
+function trackCapture(move) {
+  if (!move.captured) return;
+  (move.color === 'w' ? capturedByW : capturedByB).push(move.captured);
+  renderCaptures();
+}
+
+function renderCaptures() {
+  const wScore = capturedByW.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
+  const bScore = capturedByB.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
+  renderCaptureRow('captured-w', capturedByW, SYM_BLACK, wScore - bScore);
+  renderCaptureRow('captured-b', capturedByB, SYM_WHITE, bScore - wScore);
+}
+
+function renderCaptureRow(id, pieces, syms, adv) {
+  const el = document.getElementById(id);
+  const sorted = [...pieces].sort((a, b) => (PIECE_ORDER[a] ?? 4) - (PIECE_ORDER[b] ?? 4));
+  el.innerHTML = sorted.map(p => syms[p] || '').join('')
+    + (adv > 0 ? `<span class="score-adv">+${adv}</span>` : '');
+}
 
 // ── Timer ──────────────────────────────────────────────────────────────────
 
@@ -568,7 +707,8 @@ function handleEngineMsg(e) {
     clearHighlights();
     const mv = line.split(' ')[1];
     if (mv && mv !== '(none)') {
-      game.move({ from: mv.slice(0,2), to: mv.slice(2,4), promotion: mv[4] || 'q' });
+      const emove = game.move({ from: mv.slice(0,2), to: mv.slice(2,4), promotion: mv[4] || 'q' });
+      if (emove) trackCapture(emove);
       board.position(game.fen());
       updateStatus();
       updateMoves();
@@ -638,6 +778,7 @@ function onSquareClick(square) {
   selectedSquare = null;
 
   if (move) {
+    trackCapture(move);
     board.position(game.fen());
     updateStatus();
     updateMoves();
@@ -670,10 +811,16 @@ function updateStatus() {
   const turn = game.turn() === 'w' ? '백 (White)' : '흑 (Black)';
 
   if (game.in_checkmate()) {
-    const winner = game.turn() === 'w' ? '흑 승리!' : '백 승리!';
-    setStatus(`체크메이트 — ${winner}`, 'over', '🎉', '수고했어요!');
+    const winnerText = game.turn() === 'w' ? '흑 승리!' : '백 승리!';
+    setStatus(`체크메이트 — ${winnerText}`, 'over', '🎉', '수고했어요!');
     clearInterval(timerInterval);
     ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    setTimeout(() => {
+      document.getElementById('game-over-title').textContent = '체크메이트!';
+      document.getElementById('game-over-winner').textContent = winnerText;
+      document.getElementById('game-over-trophy').textContent = '🏆';
+      document.getElementById('game-over-overlay').classList.add('show');
+    }, 400);
   } else if (game.in_draw()) {
     let sub = game.in_stalemate() ? '스테일메이트' :
               game.in_threefold_repetition() ? '3회 반복' :
@@ -681,6 +828,12 @@ function updateStatus() {
     setStatus('무승부', 'over', '🤝', sub);
     clearInterval(timerInterval);
     ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    setTimeout(() => {
+      document.getElementById('game-over-title').textContent = '무승부';
+      document.getElementById('game-over-winner').textContent = sub || '팽팽한 승부였어요!';
+      document.getElementById('game-over-trophy').textContent = '🤝';
+      document.getElementById('game-over-overlay').classList.add('show');
+    }, 400);
   } else {
     const check = game.in_check();
     setStatus(
@@ -748,10 +901,14 @@ function setDiff(d) {
 }
 
 function newGame() {
+  document.getElementById('game-over-overlay').classList.remove('show');
   clearInterval(timerInterval);
   if (engine && engineThinking) { engine.postMessage('stop'); engineThinking = false; }
   game = new Chess();
   timers = { w: 900, b: 900 };
+  capturedByW = [];
+  capturedByB = [];
+  renderCaptures();
   clearHighlights();
   selectedSquare = null;
   board.orientation(gameMode === 'ai' ? playerColor : 'white');
