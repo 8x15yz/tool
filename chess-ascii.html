@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess · ASCII UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #fafafa;
+      --text:     #111;
+      --muted:    #999;
+      --border:   #111;
+      --border-lt:#ddd;
+      --light-sq: #f0f0f0;
+      --dark-sq:  #b0b0b0;
+      --sel:      #ffd700;
+      --valid:    rgba(255, 215, 0, .22);
+    }
+
+    * { font-family: 'SF Mono','Cascadia Code','Fira Code','Consolas','Courier New',monospace; }
+
+    body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+      padding: 1.5rem;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    /* ── shared ── */
+    .box {
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: .8rem .9rem;
+      margin-bottom: .7rem;
+    }
+
+    .lbl {
+      font-size: .6rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: .5rem;
+    }
+
+    .seg { display: flex; }
+
+    .seg-btn {
+      font-family: inherit;
+      font-size: .68rem;
+      padding: .28rem .55rem;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .seg-btn + .seg-btn { border-left: none; }
+    .seg-btn.active { background: var(--text); color: #fff; }
+    .seg-btn:not(.active):hover { background: #f5f5f5; color: var(--text); }
+
+    .btn-new {
+      font-family: inherit;
+      font-size: .7rem;
+      padding: .55rem .9rem;
+      border: 1px solid var(--border);
+      background: var(--text);
+      color: #fff;
+      cursor: pointer;
+      width: 100%;
+      letter-spacing: .03em;
+    }
+
+    .btn-new:hover { background: #333; }
+
+    /* ── left ── */
+    .left-panel {
+      width: 195px;
+      flex-shrink: 0;
+    }
+
+    .brand h1 { font-size: 1.05rem; font-weight: 700; margin-bottom: .75rem; }
+
+    .back {
+      display: block;
+      font-size: .6rem;
+      color: var(--muted);
+      text-decoration: none;
+      margin-bottom: .7rem;
+    }
+    .back:hover { color: var(--text); }
+
+    /* ── center ── */
+    .center {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .9rem;
+    }
+
+    /* Board + labels as a single aligned grid */
+    .board-wrap {
+      display: grid;
+      grid-template-columns: 1.4rem 1fr;
+      grid-template-rows: 1fr auto;
+      width: min(calc(100vw - 540px), 480px);
+      min-width: 260px;
+    }
+
+    .rank-labels {
+      grid-column: 1;
+      grid-row: 1;
+      display: grid;
+      grid-template-rows: repeat(8, 1fr);
+      padding-right: .3rem;
+      justify-items: end;
+    }
+
+    .rank-labels span {
+      font-size: .6rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+
+    .board-grid {
+      grid-column: 2;
+      grid-row: 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border: 1px solid var(--border);
+      outline: 1px solid var(--border);
+    }
+
+    .file-labels {
+      grid-column: 2;
+      grid-row: 2;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      margin-top: .25rem;
+    }
+
+    .file-labels span {
+      font-size: .6rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Squares */
+    .sq {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1rem, 3.8vw, 2.5rem);
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+
+    .sq.light { background: var(--light-sq); }
+    .sq.dark  { background: var(--dark-sq); }
+
+    .sq.sel            { background: var(--sel) !important; color: var(--text); }
+    .sq.valid          { background: var(--valid) !important; }
+    .sq.valid::after   {
+      content: '·';
+      position: absolute;
+      font-size: 1.6rem;
+      color: rgba(0,0,0,.3);
+      pointer-events: none;
+    }
+    .sq.valid.occupied::after {
+      content: '';
+      width: 88%;
+      height: 88%;
+      border: 2px solid rgba(0,0,0,.25);
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      border: 1px solid var(--border);
+      padding: .6rem .9rem;
+      background: #fff;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .status-icon { font-size: .85rem; flex-shrink: 0; }
+    .status-texts { flex: 1; }
+    .status-main { font-size: .68rem; font-weight: 700; }
+    .status-main.check { color: #c00; }
+    .status-main.over  { color: #060; }
+    .status-sub { font-size: .58rem; color: var(--muted); margin-top: .18rem; }
+
+    .thinking-badge {
+      font-size: .58rem;
+      background: var(--text);
+      color: #fff;
+      padding: .18rem .42rem;
+      white-space: nowrap;
+    }
+
+    /* ── right ── */
+    .right-panel {
+      width: 195px;
+      flex-shrink: 0;
+    }
+
+    .player-card {
+      border: 1px solid var(--border-lt);
+      background: #fff;
+      padding: .75rem .85rem;
+      display: flex;
+      align-items: flex-start;
+      gap: .6rem;
+      margin-bottom: .7rem;
+      transition: border-color .1s;
+    }
+
+    .player-card.active-turn {
+      border-left: 3px solid var(--text);
+    }
+
+    .player-avatar { font-size: 1.55rem; line-height: 1; flex-shrink: 0; }
+
+    .player-info { flex: 1; min-width: 0; }
+
+    .player-name { font-size: .68rem; font-weight: 700; }
+
+    .player-timer {
+      font-size: .6rem;
+      color: var(--muted);
+      margin-top: .22rem;
+    }
+
+    .player-timer.running { color: #070; }
+    .player-timer.low     { color: #c00; }
+
+    .captured-row {
+      font-size: .82rem;
+      margin-top: .22rem;
+      letter-spacing: -.03em;
+      line-height: 1.2;
+      word-break: break-all;
+    }
+
+    .score-adv {
+      font-size: .55rem;
+      background: var(--text);
+      color: #fff;
+      padding: .03rem .22rem;
+      margin-left: .2rem;
+      vertical-align: middle;
+    }
+
+    .history-card {
+      border: 1px solid var(--border-lt);
+      background: #fff;
+      padding: .75rem .85rem;
+      margin-bottom: .7rem;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .moves-list {
+      font-size: .6rem;
+      line-height: 2.1;
+      overflow-y: auto;
+      max-height: 200px;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .moves-list b { color: var(--text); }
+
+    /* ── Game over ── */
+    @keyframes ov-bg   { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes ov-card { from { opacity: 0; transform: translate(-50%,-46%) } to { opacity: 1; transform: translate(-50%,-50%) } }
+
+    .game-over-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 1000;
+      animation: ov-bg .2s ease;
+    }
+
+    .game-over-overlay.show { display: block; }
+
+    .game-over-card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: #fff;
+      border: 2px solid var(--text);
+      padding: 2rem 2.5rem;
+      text-align: center;
+      min-width: 270px;
+      animation: ov-card .22s ease;
+    }
+
+    .go-trophy  { font-size: 2.8rem; display: block; margin-bottom: .65rem; }
+    .go-title   { font-size: .85rem; font-weight: 700; margin-bottom: .35rem; }
+    .go-winner  { font-size: .62rem; color: var(--muted); margin-bottom: 1.4rem; line-height: 1.9; }
+
+    .go-btn {
+      font-family: inherit;
+      font-size: .68rem;
+      padding: .5rem 1.2rem;
+      background: var(--text);
+      color: #fff;
+      border: 1px solid var(--text);
+      cursor: pointer;
+    }
+    .go-btn:hover { background: #333; }
+
+    /* ── Responsive ── */
+    @media (max-width: 960px) {
+      .app { flex-direction: column; align-items: center; padding: 1rem; }
+      .left-panel, .right-panel { width: 100%; max-width: 480px; }
+      .board-wrap { width: min(480px, calc(100vw - 2rem)); min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Left Panel ── -->
+  <aside class="left-panel">
+    <div class="brand"><h1>♟ CHESS</h1></div>
+    <a class="back" href="./index.html">← 돌아가기</a>
+
+    <div class="box">
+      <div class="lbl">게임 모드</div>
+      <div class="seg">
+        <button class="seg-btn active" id="btn-ai" onclick="setMode('ai')">vs AI</button>
+        <button class="seg-btn" id="btn-2p" onclick="setMode('2p')">2인 대전</button>
+      </div>
+    </div>
+
+    <div class="box" id="diff-card">
+      <div class="lbl">AI 난이도</div>
+      <div class="seg">
+        <button class="seg-btn" id="btn-easy" onclick="setDiff('easy')">🌱 쉬움</button>
+        <button class="seg-btn active" id="btn-medium" onclick="setDiff('medium')">⭐ 보통</button>
+        <button class="seg-btn" id="btn-hard" onclick="setDiff('hard')">👑 어려움</button>
+      </div>
+    </div>
+
+    <div class="box" id="color-card">
+      <div class="lbl">기물 색상</div>
+      <div class="seg">
+        <button class="seg-btn active" id="btn-white" onclick="setColor('white')">♙ 백</button>
+        <button class="seg-btn" id="btn-black" onclick="setColor('black')">♟ 흑</button>
+      </div>
+    </div>
+
+    <button class="btn-new" onclick="newGame()">♥ 새 게임</button>
+  </aside>
+
+  <!-- ── Center ── -->
+  <main class="center">
+    <div class="board-wrap">
+      <div class="rank-labels" id="rank-labels"></div>
+      <div class="board-grid" id="board-grid"></div>
+      <div><!-- spacer --></div>
+      <div class="file-labels" id="file-labels"></div>
+    </div>
+
+    <div class="status-bar">
+      <span class="status-icon" id="status-icon">♟</span>
+      <div class="status-texts">
+        <div class="status-main" id="status">새 게임을 시작해보세요!</div>
+        <div class="status-sub" id="status-sub">당신의 첫 수를 기다리고 있어요.</div>
+      </div>
+      <span class="thinking-badge" id="thinking" style="display:none">thinking...</span>
+    </div>
+  </main>
+
+  <!-- ── Right Panel ── -->
+  <aside class="right-panel">
+    <div class="player-card active-turn" id="card-w">
+      <div class="player-avatar">♙</div>
+      <div class="player-info">
+        <div class="player-name" id="name-w">나 (백)</div>
+        <div class="player-timer" id="timer-w">⏱ 15:00</div>
+        <div class="captured-row" id="captured-w"></div>
+      </div>
+    </div>
+
+    <div class="history-card">
+      <div class="lbl" style="margin-bottom:.5rem">기보</div>
+      <div class="moves-list" id="moves"><span style="color:var(--muted)">—</span></div>
+    </div>
+
+    <div class="player-card" id="card-b">
+      <div class="player-avatar">♟</div>
+      <div class="player-info">
+        <div class="player-name" id="name-b">AI (흑)</div>
+        <div class="player-timer" id="timer-b">⏱ 15:00</div>
+        <div class="captured-row" id="captured-b"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Game Over -->
+<div class="game-over-overlay" id="game-over-overlay">
+  <div class="game-over-card">
+    <span class="go-trophy" id="go-trophy">🏆</span>
+    <div class="go-title" id="go-title">체크메이트!</div>
+    <div class="go-winner" id="go-winner">백 승리</div>
+    <button class="go-btn" onclick="newGame()">♥ 새 게임</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+'use strict';
+
+let game;
+let engine, engineReady = false, engineThinking = false;
+let gameMode = 'ai', playerColor = 'white', difficulty = 'medium';
+let selectedSquare = null, validTargets = [], boardOrientation = 'white';
+let timers = { w: 900, b: 900 }, timerInterval = null;
+let capturedByW = [], capturedByB = [];
+
+const DIFF = {
+  easy:   { skill: 3,  movetime: 300 },
+  medium: { skill: 10, movetime: 800 },
+  hard:   { skill: 20, movetime: 2000 },
+};
+
+const U = {
+  wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
+  bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟',
+};
+
+const PIECE_VALUES = { p:1, n:3, b:3, r:5, q:9 };
+const PIECE_ORDER  = { q:0, r:1, b:2, n:3, p:4 };
+const SYM_B = { p:'♟', n:'♞', b:'♝', r:'♜', q:'♛' };
+const SYM_W = { p:'♙', n:'♘', b:'♗', r:'♖', q:'♕' };
+
+// ── Board Renderer ─────────────────────────────────────────────────────────
+
+function squareName(r, ci) {
+  return boardOrientation === 'white'
+    ? String.fromCharCode(97 + ci) + (8 - r)
+    : String.fromCharCode(97 + (7 - ci)) + (r + 1);
+}
+
+function renderBoard() {
+  const b = game.board();
+  const el = document.getElementById('board-grid');
+  let html = '';
+
+  for (let r = 0; r < 8; r++) {
+    for (let ci = 0; ci < 8; ci++) {
+      const br = boardOrientation === 'white' ? r : (7 - r);
+      const bc = boardOrientation === 'white' ? ci : (7 - ci);
+      const piece = b[br][bc];
+      const sq = squareName(r, ci);
+      const isLight = (r + ci) % 2 === 0;
+      const sym = piece ? (U[piece.color + piece.type.toUpperCase()] || '') : '';
+      const isSel   = sq === selectedSquare;
+      const isValid = validTargets.includes(sq);
+      let cls = `sq ${isLight ? 'light' : 'dark'}`;
+      if (isSel)              cls += ' sel';
+      else if (isValid)       cls += ' valid' + (piece ? ' occupied' : '');
+      html += `<div class="${cls}" data-sq="${sq}">${sym}</div>`;
+    }
+  }
+
+  el.innerHTML = html;
+  el.querySelectorAll('.sq').forEach(s =>
+    s.addEventListener('click', () => onSqClick(s.dataset.sq))
+  );
+
+  // Labels
+  const ranks = boardOrientation === 'white'
+    ? [8,7,6,5,4,3,2,1] : [1,2,3,4,5,6,7,8];
+  const files = boardOrientation === 'white'
+    ? ['a','b','c','d','e','f','g','h']
+    : ['h','g','f','e','d','c','b','a'];
+  document.getElementById('rank-labels').innerHTML = ranks.map(r=>`<span>${r}</span>`).join('');
+  document.getElementById('file-labels').innerHTML = files.map(f=>`<span>${f}</span>`).join('');
+}
+
+// ── Click ──────────────────────────────────────────────────────────────────
+
+function onSqClick(sq) {
+  if (game.game_over() || engineThinking) return;
+  const t = game.turn();
+  if (gameMode === 'ai' && t !== playerColor[0]) return;
+
+  const piece = game.get(sq);
+
+  if (!selectedSquare) {
+    if (piece && piece.color === t) {
+      selectedSquare = sq;
+      validTargets = game.moves({ square: sq, verbose: true }).map(m => m.to);
+      renderBoard();
+    }
+    return;
+  }
+
+  if (sq === selectedSquare) {
+    selectedSquare = null; validTargets = [];
+    renderBoard(); return;
+  }
+
+  if (piece && piece.color === t) {
+    selectedSquare = sq;
+    validTargets = game.moves({ square: sq, verbose: true }).map(m => m.to);
+    renderBoard(); return;
+  }
+
+  const move = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
+  selectedSquare = null; validTargets = [];
+  if (move) {
+    trackCapture(move);
+    renderBoard();
+    updateStatus();
+    updateMoves();
+    renderTimers();
+    if (gameMode === 'ai' && !game.game_over()) setTimeout(askEngine, 200);
+  } else {
+    renderBoard();
+  }
+}
+
+// ── Captures ───────────────────────────────────────────────────────────────
+
+function trackCapture(move) {
+  if (!move.captured) return;
+  (move.color === 'w' ? capturedByW : capturedByB).push(move.captured);
+  renderCaptures();
+}
+
+function renderCaptures() {
+  const ws = capturedByW.reduce((s,p) => s + (PIECE_VALUES[p]||0), 0);
+  const bs = capturedByB.reduce((s,p) => s + (PIECE_VALUES[p]||0), 0);
+  renderCaptureRow('captured-w', capturedByW, SYM_B, ws - bs);
+  renderCaptureRow('captured-b', capturedByB, SYM_W, bs - ws);
+}
+
+function renderCaptureRow(id, pieces, syms, adv) {
+  const el = document.getElementById(id);
+  const sorted = [...pieces].sort((a,b) => (PIECE_ORDER[a]??4)-(PIECE_ORDER[b]??4));
+  el.innerHTML = sorted.map(p => syms[p]||'').join('')
+    + (adv > 0 ? `<span class="score-adv">+${adv}</span>` : '');
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+
+function fmt(s) {
+  return `⏱ ${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function startClock() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (game.game_over()) { clearInterval(timerInterval); return; }
+    const t = game.turn();
+    if (timers[t] > 0) timers[t]--;
+    renderTimers();
+    if (timers[t] === 0) {
+      clearInterval(timerInterval);
+      const w = t === 'w' ? '흑' : '백';
+      setStatus(`시간 초과 — ${w} 승리!`, 'over', '⏰', '');
+      ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    }
+  }, 1000);
+}
+
+function renderTimers() {
+  const wEl = document.getElementById('timer-w');
+  const bEl = document.getElementById('timer-b');
+  wEl.textContent = fmt(timers.w);
+  bEl.textContent = fmt(timers.b);
+  wEl.className = `player-timer${timers.w<=30?' low':game.turn()==='w'&&!game.game_over()?' running':''}`;
+  bEl.className = `player-timer${timers.b<=30?' low':game.turn()==='b'&&!game.game_over()?' running':''}`;
+  if (!game.game_over()) {
+    const t = game.turn();
+    document.getElementById('card-w').classList.toggle('active-turn', t === 'w');
+    document.getElementById('card-b').classList.toggle('active-turn', t === 'b');
+  }
+}
+
+// ── Engine ─────────────────────────────────────────────────────────────────
+
+function initEngine() {
+  try {
+    const src = `importScripts('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')`;
+    engine = new Worker(URL.createObjectURL(new Blob([src], {type:'application/javascript'})));
+    engine.onmessage = handleEngineMsg;
+    engine.onerror = () => { engine = null; };
+    engine.postMessage('uci');
+  } catch(e) { engine = null; }
+}
+
+function handleEngineMsg(e) {
+  const line = e.data;
+  if (line === 'uciok')   engine.postMessage('isready');
+  if (line === 'readyok') engineReady = true;
+  if (line.startsWith('bestmove')) {
+    engineThinking = false;
+    setThinking(false);
+    selectedSquare = null; validTargets = [];
+    const mv = line.split(' ')[1];
+    if (mv && mv !== '(none)') {
+      const em = game.move({from:mv.slice(0,2), to:mv.slice(2,4), promotion:mv[4]||'q'});
+      if (em) trackCapture(em);
+      renderBoard();
+      updateStatus();
+      updateMoves();
+      renderTimers();
+    }
+  }
+}
+
+function askEngine() {
+  if (!engine || !engineReady || engineThinking || game.game_over()) return;
+  const { skill, movetime } = DIFF[difficulty];
+  engineThinking = true;
+  setThinking(true);
+  engine.postMessage(`setoption name Skill Level value ${skill}`);
+  engine.postMessage(`position fen ${game.fen()}`);
+  engine.postMessage(`go movetime ${movetime}`);
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────
+
+function setStatus(txt, cls, icon, sub) {
+  document.getElementById('status').textContent = txt;
+  document.getElementById('status').className = 'status-main' + (cls ? ' '+cls : '');
+  document.getElementById('status-icon').textContent = icon || '♟';
+  document.getElementById('status-sub').textContent = sub ?? '';
+}
+
+function updateStatus() {
+  const turn = game.turn() === 'w' ? '백 (White)' : '흑 (Black)';
+  if (game.in_checkmate()) {
+    const w = game.turn() === 'w' ? '흑 승리!' : '백 승리!';
+    setStatus(`체크메이트 — ${w}`, 'over', '🏆', '수고했어요!');
+    clearInterval(timerInterval);
+    ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    setTimeout(() => {
+      document.getElementById('go-title').textContent = '체크메이트!';
+      document.getElementById('go-winner').textContent = w;
+      document.getElementById('go-trophy').textContent = '🏆';
+      document.getElementById('game-over-overlay').classList.add('show');
+    }, 400);
+  } else if (game.in_draw()) {
+    const sub = game.in_stalemate() ? '스테일메이트' :
+                game.in_threefold_repetition() ? '3회 반복' :
+                game.insufficient_material() ? '기물 부족' : '';
+    setStatus('무승부', 'over', '🤝', sub);
+    clearInterval(timerInterval);
+    ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    setTimeout(() => {
+      document.getElementById('go-title').textContent = '무승부';
+      document.getElementById('go-winner').textContent = sub || '팽팽한 승부!';
+      document.getElementById('go-trophy').textContent = '🤝';
+      document.getElementById('game-over-overlay').classList.add('show');
+    }, 400);
+  } else {
+    const check = game.in_check();
+    setStatus(
+      `${turn} 차례${check ? ' · 체크!' : ''}`,
+      check ? 'check' : '',
+      check ? '⚠️' : '♟',
+      check ? '체크 상태입니다!' : ''
+    );
+  }
+}
+
+function setThinking(on) {
+  document.getElementById('thinking').style.display = on ? '' : 'none';
+}
+
+function updateMoves() {
+  const h = game.history();
+  const el = document.getElementById('moves');
+  if (!h.length) { el.innerHTML = '<span style="color:var(--muted)">—</span>'; return; }
+  let html = '';
+  for (let i = 0; i < h.length; i += 2) {
+    const n = i/2+1;
+    html += `${n}. <b>${h[i]}</b>${h[i+1]?' <b>'+h[i+1]+'</b>':''} `;
+  }
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateNames() {
+  if (gameMode === '2p') {
+    document.getElementById('name-w').textContent = '백';
+    document.getElementById('name-b').textContent = '흑';
+  } else if (playerColor === 'white') {
+    document.getElementById('name-w').textContent = '나 (백)';
+    document.getElementById('name-b').textContent = 'AI (흑)';
+  } else {
+    document.getElementById('name-w').textContent = 'AI (백)';
+    document.getElementById('name-b').textContent = '나 (흑)';
+  }
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+
+function setMode(m) {
+  gameMode = m;
+  document.getElementById('btn-ai').classList.toggle('active', m==='ai');
+  document.getElementById('btn-2p').classList.toggle('active', m==='2p');
+  document.getElementById('color-card').style.display = m==='ai' ? '' : 'none';
+  document.getElementById('diff-card').style.display  = m==='ai' ? '' : 'none';
+  newGame();
+}
+
+function setColor(c) {
+  playerColor = c;
+  document.getElementById('btn-white').classList.toggle('active', c==='white');
+  document.getElementById('btn-black').classList.toggle('active', c==='black');
+  newGame();
+}
+
+function setDiff(d) {
+  difficulty = d;
+  ['easy','medium','hard'].forEach(x =>
+    document.getElementById('btn-'+x).classList.toggle('active', x===d)
+  );
+}
+
+function newGame() {
+  document.getElementById('game-over-overlay').classList.remove('show');
+  clearInterval(timerInterval);
+  if (engine && engineThinking) { engine.postMessage('stop'); engineThinking = false; }
+  game = new Chess();
+  boardOrientation = gameMode === 'ai' ? playerColor : 'white';
+  timers = { w:900, b:900 };
+  capturedByW = []; capturedByB = [];
+  selectedSquare = null; validTargets = [];
+  renderBoard();
+  renderCaptures();
+  updateNames();
+  renderTimers();
+  setThinking(false);
+  setStatus('새 게임을 시작해보세요!', '', '♟', '당신의 첫 수를 기다리고 있어요.');
+  updateMoves();
+  startClock();
+  if (gameMode === 'ai' && playerColor === 'black') setTimeout(askEngine, 500);
+}
+
+initEngine();
+newGame();
+</script>
+</body>
+</html>

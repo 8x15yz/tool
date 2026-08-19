@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess · Pixel UI Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #120f1e;
+      --bg2:     #1e1a2e;
+      --bg3:     #2a2540;
+      --gold:    #ffd700;
+      --gold-dk: #b8960c;
+      --text:    #e8e4ff;
+      --muted:   #5a5780;
+      --green:   #44d97b;
+      --red:     #ff5555;
+      --ink:     #000000;
+    }
+
+    * { font-family: 'Press Start 2P', monospace; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      image-rendering: pixelated;
+    }
+
+    /* scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 3px,
+        rgba(0,0,0,.06) 3px, rgba(0,0,0,.06) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+      padding: 1.5rem;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+
+    /* ── Shared pixel primitives ──────────────────── */
+
+    .px-card {
+      background: var(--bg2);
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      padding: 1rem;
+    }
+
+    .px-label {
+      font-size: .42rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: .65rem;
+      border-bottom: 2px solid var(--bg3);
+      padding-bottom: .45rem;
+    }
+
+    .px-seg {
+      display: flex;
+      border: 3px solid var(--ink);
+    }
+
+    .px-seg button {
+      flex: 1;
+      padding: .55rem .3rem;
+      font-family: inherit;
+      font-size: .42rem;
+      border: none;
+      background: var(--bg3);
+      color: var(--muted);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .px-seg button + button { border-left: 2px solid var(--ink); }
+
+    .px-seg button.active {
+      background: var(--gold);
+      color: var(--ink);
+    }
+
+    .px-btn {
+      font-family: inherit;
+      font-size: .52rem;
+      padding: .72rem 1rem;
+      background: var(--gold);
+      color: var(--ink);
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      width: 100%;
+      transition: transform .06s, box-shadow .06s;
+    }
+
+    .px-btn:hover {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .px-btn:active {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
+
+    /* ── Left Panel ───────────────────────────────── */
+    .left-panel {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+    }
+
+    .brand {
+      padding: .6rem 0;
+    }
+
+    .brand h1 {
+      font-size: 1rem;
+      color: var(--gold);
+      letter-spacing: -.02em;
+      text-shadow: 3px 3px 0 var(--gold-dk);
+    }
+
+    .brand p {
+      font-size: .38rem;
+      color: var(--muted);
+      margin-top: .6rem;
+      line-height: 1.8;
+    }
+
+    .back {
+      font-size: .38rem;
+      color: var(--muted);
+      text-decoration: none;
+      display: block;
+    }
+
+    .color-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .5rem;
+    }
+
+    .color-btn {
+      font-family: inherit;
+      font-size: .42rem;
+      padding: .5rem .3rem;
+      border: 3px solid var(--ink);
+      box-shadow: 3px 3px 0 var(--ink);
+      background: var(--bg3);
+      color: var(--muted);
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .color-btn.active {
+      background: var(--gold);
+      color: var(--ink);
+    }
+
+    /* ── Center ───────────────────────────────────── */
+    .center {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .board-wrap {
+      border: 4px solid var(--ink);
+      box-shadow: 6px 6px 0 var(--ink);
+      background: #eeeed2;
+      image-rendering: pixelated;
+    }
+
+    #board {
+      width: clamp(300px, calc(100vw - 560px), 580px);
+    }
+
+    /* board colors — classic green */
+    .white-1e1d7 { background-color: #eeeed2; }
+    .black-3c85d { background-color: #769656; }
+
+    /* highlight */
+    .sq-selected { background-color: rgba(255, 215, 0, 0.65) !important; }
+    .sq-valid    { background-color: rgba(255, 215, 0, 0.28) !important; }
+    .square-55d63 { cursor: crosshair; }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      background: var(--bg2);
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      padding: .75rem 1rem;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .status-icon { font-size: .85rem; flex-shrink: 0; }
+
+    .status-texts { flex: 1; }
+
+    .status-main {
+      font-size: .48rem;
+      color: var(--text);
+      line-height: 1.8;
+    }
+
+    .status-main.check { color: var(--red); }
+    .status-main.over  { color: var(--gold); }
+
+    .status-sub {
+      font-size: .38rem;
+      color: var(--muted);
+      margin-top: .35rem;
+      line-height: 1.8;
+    }
+
+    .thinking-badge {
+      font-size: .38rem;
+      color: var(--ink);
+      background: var(--gold);
+      padding: .25rem .5rem;
+      border: 2px solid var(--ink);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Right Panel ──────────────────────────────── */
+    .right-panel {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+    }
+
+    .player-card {
+      background: var(--bg2);
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      padding: .85rem .9rem;
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      transition: border-color .1s;
+    }
+
+    .player-card.active-turn {
+      border-color: var(--gold);
+      box-shadow: 4px 4px 0 var(--gold-dk);
+    }
+
+    .player-card.dark-card {
+      background: var(--bg);
+    }
+
+    .player-avatar {
+      width: 34px;
+      height: 34px;
+      background: var(--bg3);
+      border: 2px solid var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      image-rendering: pixelated;
+    }
+
+    .dark-card .player-avatar { background: var(--bg2); }
+
+    .player-info { flex: 1; min-width: 0; }
+
+    .player-name {
+      font-size: .42rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .player-timer {
+      font-size: .55rem;
+      color: var(--green);
+      margin-top: .35rem;
+      letter-spacing: .04em;
+    }
+
+    .player-timer.low { color: var(--red); }
+
+    .captured-row {
+      font-size: .7rem;
+      margin-top: .35rem;
+      line-height: 1;
+      letter-spacing: -.01em;
+    }
+
+    .score-adv {
+      font-size: .38rem;
+      background: var(--gold);
+      color: var(--ink);
+      padding: .08rem .25rem;
+      margin-left: .25rem;
+      border: 1px solid var(--ink);
+      vertical-align: middle;
+    }
+
+    .history-card {
+      flex: 1;
+      background: var(--bg2);
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      padding: .9rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 160px;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .65rem;
+      padding-bottom: .45rem;
+      border-bottom: 2px solid var(--bg3);
+    }
+
+    .history-label {
+      font-size: .42rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .moves-list {
+      flex: 1;
+      font-size: .4rem;
+      line-height: 2.4;
+      overflow-y: auto;
+      color: var(--muted);
+      word-break: break-word;
+    }
+
+    .moves-list b { color: var(--text); }
+
+    .no-moves {
+      font-size: .38rem;
+      color: var(--muted);
+      text-align: center;
+      padding-top: 1rem;
+      line-height: 2.2;
+    }
+
+    /* ── Game Over Overlay ────────────────────────── */
+    @keyframes px-in   { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes px-card { from { opacity: 0; transform: translate(-50%,-54%) } to { opacity: 1; transform: translate(-50%,-50%) } }
+
+    .game-over-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 1000;
+      animation: px-in .2s ease;
+    }
+
+    .game-over-overlay.show { display: block; }
+
+    .game-over-card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: var(--bg2);
+      border: 4px solid var(--gold);
+      box-shadow: 8px 8px 0 var(--ink);
+      padding: 2.2rem 2.6rem;
+      text-align: center;
+      animation: px-card .2s ease;
+      min-width: 280px;
+    }
+
+    .game-over-trophy { font-size: 3rem; display: block; margin-bottom: .8rem; }
+
+    .game-over-title {
+      font-size: .9rem;
+      color: var(--gold);
+      text-shadow: 3px 3px 0 var(--gold-dk);
+      margin-bottom: .6rem;
+      line-height: 1.6;
+    }
+
+    .game-over-winner {
+      font-size: .5rem;
+      color: var(--text);
+      margin-bottom: 1.6rem;
+      line-height: 2;
+    }
+
+    .game-over-btn {
+      font-family: inherit;
+      font-size: .55rem;
+      padding: .75rem 1.4rem;
+      background: var(--gold);
+      color: var(--ink);
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: transform .06s, box-shadow .06s;
+    }
+
+    .game-over-btn:hover {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 900px) {
+      .app { flex-direction: column; align-items: center; padding: 1rem; }
+      .left-panel, .right-panel { width: 100%; max-width: 480px; }
+      #board { width: min(480px, calc(100vw - 2.5rem)); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Left Panel ── -->
+  <aside class="left-panel">
+    <div class="brand">
+      <h1>♟ CHESS</h1>
+      <p>전략으로 승리를<br>차지하세요!</p>
+    </div>
+
+    <a class="back" href="./index.html">← 돌아가기</a>
+
+    <div class="px-card">
+      <div class="px-label">게임 모드</div>
+      <div class="px-seg">
+        <button class="active" id="btn-ai" onclick="setMode('ai')">vs AI</button>
+        <button id="btn-2p" onclick="setMode('2p')">2인</button>
+      </div>
+    </div>
+
+    <div class="px-card" id="diff-card">
+      <div class="px-label">AI 난이도</div>
+      <div class="px-seg">
+        <button id="btn-easy" onclick="setDiff('easy')">🌱</button>
+        <button class="active" id="btn-medium" onclick="setDiff('medium')">⭐</button>
+        <button id="btn-hard" onclick="setDiff('hard')">👑</button>
+      </div>
+    </div>
+
+    <div class="px-card" id="color-card">
+      <div class="px-label">기물 색상</div>
+      <div class="color-btns">
+        <button class="color-btn active" id="btn-white" onclick="setColor('white')">♙ 백</button>
+        <button class="color-btn" id="btn-black" onclick="setColor('black')">♟ 흑</button>
+      </div>
+    </div>
+
+    <button class="px-btn" onclick="newGame()">▶ 새 게임</button>
+  </aside>
+
+  <!-- ── Center ── -->
+  <main class="center">
+    <div class="board-wrap">
+      <div id="board"></div>
+    </div>
+
+    <div class="status-bar">
+      <span class="status-icon" id="status-icon">♟</span>
+      <div class="status-texts">
+        <div class="status-main" id="status">새 게임을 시작해보세요!</div>
+        <div class="status-sub" id="status-sub">당신의 첫 수를 기다리고 있어요.</div>
+      </div>
+      <span class="thinking-badge" id="thinking" style="display:none">THINKING...</span>
+    </div>
+  </main>
+
+  <!-- ── Right Panel ── -->
+  <aside class="right-panel">
+    <div class="player-card active-turn" id="card-w">
+      <div class="player-avatar">♙</div>
+      <div class="player-info">
+        <div class="player-name" id="name-w">나 (백)</div>
+        <div class="player-timer" id="timer-w">15:00</div>
+        <div class="captured-row" id="captured-w"></div>
+      </div>
+    </div>
+
+    <div class="history-card">
+      <div class="history-header">
+        <div class="history-label">기보</div>
+        <span style="font-size:.55rem">📋</span>
+      </div>
+      <div class="moves-list" id="moves">
+        <div class="no-moves">새 게임을<br>시작해보세요!</div>
+      </div>
+    </div>
+
+    <div class="player-card dark-card" id="card-b">
+      <div class="player-avatar">♟</div>
+      <div class="player-info">
+        <div class="player-name" id="name-b">AI (흑)</div>
+        <div class="player-timer" id="timer-b">15:00</div>
+        <div class="captured-row" id="captured-b"></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Game Over Overlay -->
+<div class="game-over-overlay" id="game-over-overlay">
+  <div class="game-over-card">
+    <span class="game-over-trophy" id="game-over-trophy">🏆</span>
+    <div class="game-over-title" id="game-over-title">CHECKMATE!</div>
+    <div class="game-over-winner" id="game-over-winner">백 승리</div>
+    <button class="game-over-btn" onclick="newGame()">▶ 새 게임</button>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script>
+'use strict';
+
+let game, board, engine, engineReady = false, engineThinking = false;
+let gameMode = 'ai', playerColor = 'white', difficulty = 'medium';
+let selectedSquare = null;
+let timers = { w: 900, b: 900 };
+let timerInterval = null;
+let capturedByW = [];
+let capturedByB = [];
+
+const DIFF = {
+  easy:   { skill: 3,  movetime: 300 },
+  medium: { skill: 10, movetime: 800 },
+  hard:   { skill: 20, movetime: 2000 },
+};
+
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+const PIECE_ORDER  = { q: 0, r: 1, b: 2, n: 3, p: 4 };
+const SYM_BLACK    = { p:'♟', n:'♞', b:'♝', r:'♜', q:'♛' };
+const SYM_WHITE    = { p:'♙', n:'♘', b:'♗', r:'♖', q:'♕' };
+
+// ── Captures ───────────────────────────────────────────────────────────────
+
+function trackCapture(move) {
+  if (!move.captured) return;
+  (move.color === 'w' ? capturedByW : capturedByB).push(move.captured);
+  renderCaptures();
+}
+
+function renderCaptures() {
+  const wScore = capturedByW.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
+  const bScore = capturedByB.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
+  renderCaptureRow('captured-w', capturedByW, SYM_BLACK, wScore - bScore);
+  renderCaptureRow('captured-b', capturedByB, SYM_WHITE, bScore - wScore);
+}
+
+function renderCaptureRow(id, pieces, syms, adv) {
+  const el = document.getElementById(id);
+  const sorted = [...pieces].sort((a, b) => (PIECE_ORDER[a] ?? 4) - (PIECE_ORDER[b] ?? 4));
+  el.innerHTML = sorted.map(p => syms[p] || '').join('')
+    + (adv > 0 ? `<span class="score-adv">+${adv}</span>` : '');
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+
+function fmt(s) {
+  return `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+}
+
+function startClock() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (game.game_over()) { clearInterval(timerInterval); return; }
+    const t = game.turn();
+    if (timers[t] > 0) timers[t]--;
+    renderTimers();
+    if (timers[t] === 0) {
+      clearInterval(timerInterval);
+      const winner = t === 'w' ? '흑' : '백';
+      setStatus(`TIME OUT — ${winner} 승리!`, 'over', '⏰', '');
+      ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    }
+  }, 1000);
+}
+
+function renderTimers() {
+  const wEl = document.getElementById('timer-w');
+  const bEl = document.getElementById('timer-b');
+  wEl.textContent = fmt(timers.w);
+  bEl.textContent = fmt(timers.b);
+  wEl.classList.toggle('low', timers.w <= 30);
+  bEl.classList.toggle('low', timers.b <= 30);
+  if (!game.game_over()) {
+    const t = game.turn();
+    document.getElementById('card-w').classList.toggle('active-turn', t === 'w');
+    document.getElementById('card-b').classList.toggle('active-turn', t === 'b');
+  }
+}
+
+// ── Engine ─────────────────────────────────────────────────────────────────
+
+function initEngine() {
+  try {
+    const src = `importScripts('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')`;
+    engine = new Worker(URL.createObjectURL(new Blob([src], { type: 'application/javascript' })));
+    engine.onmessage = handleEngineMsg;
+    engine.onerror   = () => { engine = null; };
+    engine.postMessage('uci');
+  } catch (e) { engine = null; }
+}
+
+function handleEngineMsg(e) {
+  const line = e.data;
+  if (line === 'uciok')   engine.postMessage('isready');
+  if (line === 'readyok') engineReady = true;
+  if (line.startsWith('bestmove')) {
+    engineThinking = false;
+    setThinking(false);
+    clearHighlights();
+    const mv = line.split(' ')[1];
+    if (mv && mv !== '(none)') {
+      const emove = game.move({ from: mv.slice(0,2), to: mv.slice(2,4), promotion: mv[4] || 'q' });
+      if (emove) trackCapture(emove);
+      board.position(game.fen());
+      updateStatus();
+      updateMoves();
+      renderTimers();
+    }
+  }
+}
+
+function askEngine() {
+  if (!engine || !engineReady || engineThinking || game.game_over()) return;
+  const { skill, movetime } = DIFF[difficulty];
+  engineThinking = true;
+  setThinking(true);
+  engine.postMessage(`setoption name Skill Level value ${skill}`);
+  engine.postMessage(`position fen ${game.fen()}`);
+  engine.postMessage(`go movetime ${movetime}`);
+}
+
+// ── Board ──────────────────────────────────────────────────────────────────
+
+function initBoard() {
+  game = new Chess();
+  board = Chessboard('board', {
+    draggable: false,
+    position: 'start',
+    orientation: 'white',
+    pieceTheme: './img/pieces/{piece}.png',
+  });
+
+  $(document).on('click', '.square-55d63', function () {
+    onSquareClick($(this).data('square'));
+  });
+
+  window.addEventListener('resize', () => board.resize());
+}
+
+function onSquareClick(square) {
+  if (game.game_over() || engineThinking) return;
+  const t = game.turn();
+  if (gameMode === 'ai' && t !== playerColor[0]) return;
+  const piece = game.get(square);
+
+  if (!selectedSquare) {
+    if (piece && piece.color === t) { selectedSquare = square; highlightSquare(square); }
+    return;
+  }
+  if (square === selectedSquare) { clearHighlights(); selectedSquare = null; return; }
+  if (piece && piece.color === t) { clearHighlights(); selectedSquare = square; highlightSquare(square); return; }
+
+  const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+  clearHighlights();
+  selectedSquare = null;
+  if (move) {
+    trackCapture(move);
+    board.position(game.fen());
+    updateStatus();
+    updateMoves();
+    renderTimers();
+    if (gameMode === 'ai' && !game.game_over()) setTimeout(askEngine, 200);
+  }
+}
+
+function highlightSquare(square) {
+  $(`[data-square="${square}"]`).addClass('sq-selected');
+  game.moves({ square, verbose: true }).forEach(m =>
+    $(`[data-square="${m.to}"]`).addClass('sq-valid')
+  );
+}
+
+function clearHighlights() {
+  $('.sq-selected, .sq-valid').removeClass('sq-selected sq-valid');
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────
+
+function setStatus(txt, cls, icon, sub) {
+  document.getElementById('status').textContent = txt;
+  document.getElementById('status').className = 'status-main' + (cls ? ' ' + cls : '');
+  document.getElementById('status-icon').textContent = icon || '♟';
+  document.getElementById('status-sub').textContent = sub ?? '';
+}
+
+function updateStatus() {
+  const turn = game.turn() === 'w' ? '백 (WHITE)' : '흑 (BLACK)';
+  if (game.in_checkmate()) {
+    const winner = game.turn() === 'w' ? '흑 승리!' : '백 승리!';
+    setStatus(`CHECKMATE — ${winner}`, 'over', '🏆', '수고했어요!');
+    clearInterval(timerInterval);
+    ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    setTimeout(() => {
+      document.getElementById('game-over-title').textContent = 'CHECKMATE!';
+      document.getElementById('game-over-winner').textContent = winner;
+      document.getElementById('game-over-trophy').textContent = '🏆';
+      document.getElementById('game-over-overlay').classList.add('show');
+    }, 400);
+  } else if (game.in_draw()) {
+    const sub = game.in_stalemate() ? '스테일메이트' :
+                game.in_threefold_repetition() ? '3회 반복' :
+                game.insufficient_material() ? '기물 부족' : '';
+    setStatus('DRAW', 'over', '🤝', sub);
+    clearInterval(timerInterval);
+    ['card-w','card-b'].forEach(id => document.getElementById(id).classList.remove('active-turn'));
+    setTimeout(() => {
+      document.getElementById('game-over-title').textContent = 'DRAW!';
+      document.getElementById('game-over-winner').textContent = sub || '팽팽한 승부!';
+      document.getElementById('game-over-trophy').textContent = '🤝';
+      document.getElementById('game-over-overlay').classList.add('show');
+    }, 400);
+  } else {
+    const check = game.in_check();
+    setStatus(
+      `${turn} 차례${check ? ' · CHECK!' : ''}`,
+      check ? 'check' : '',
+      check ? '⚠️' : '♟',
+      check ? '체크 상태입니다!' : ''
+    );
+  }
+}
+
+function setThinking(on) {
+  document.getElementById('thinking').style.display = on ? '' : 'none';
+}
+
+function updateMoves() {
+  const h = game.history();
+  const el = document.getElementById('moves');
+  if (!h.length) { el.innerHTML = '<div class="no-moves">새 게임을<br>시작해보세요!</div>'; return; }
+  let html = '';
+  for (let i = 0; i < h.length; i += 2) {
+    const n = i / 2 + 1;
+    html += `${n}. <b>${h[i]}</b>${h[i+1] ? ' <b>'+h[i+1]+'</b>' : ''} `;
+  }
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+function updatePlayerNames() {
+  if (gameMode === '2p') {
+    document.getElementById('name-w').textContent = '백';
+    document.getElementById('name-b').textContent = '흑';
+  } else if (playerColor === 'white') {
+    document.getElementById('name-w').textContent = '나 (백)';
+    document.getElementById('name-b').textContent = 'AI (흑)';
+  } else {
+    document.getElementById('name-w').textContent = 'AI (백)';
+    document.getElementById('name-b').textContent = '나 (흑)';
+  }
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+
+function setMode(m) {
+  gameMode = m;
+  document.getElementById('btn-ai').classList.toggle('active', m === 'ai');
+  document.getElementById('btn-2p').classList.toggle('active', m === '2p');
+  document.getElementById('color-card').style.display = m === 'ai' ? '' : 'none';
+  document.getElementById('diff-card').style.display  = m === 'ai' ? '' : 'none';
+  newGame();
+}
+
+function setColor(c) {
+  playerColor = c;
+  document.getElementById('btn-white').classList.toggle('active', c === 'white');
+  document.getElementById('btn-black').classList.toggle('active', c === 'black');
+  newGame();
+}
+
+function setDiff(d) {
+  difficulty = d;
+  ['easy','medium','hard'].forEach(x =>
+    document.getElementById('btn-'+x).classList.toggle('active', x === d)
+  );
+}
+
+function newGame() {
+  document.getElementById('game-over-overlay').classList.remove('show');
+  clearInterval(timerInterval);
+  if (engine && engineThinking) { engine.postMessage('stop'); engineThinking = false; }
+  game = new Chess();
+  timers = { w: 900, b: 900 };
+  capturedByW = [];
+  capturedByB = [];
+  renderCaptures();
+  clearHighlights();
+  selectedSquare = null;
+  board.orientation(gameMode === 'ai' ? playerColor : 'white');
+  board.position('start');
+  updatePlayerNames();
+  renderTimers();
+  setThinking(false);
+  setStatus('새 게임을 시작해보세요!', '', '♟', '당신의 첫 수를 기다리고 있어요.');
+  updateMoves();
+  startClock();
+  if (gameMode === 'ai' && playerColor === 'black') setTimeout(askEngine, 500);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+initEngine();
+initBoard();
+newGame();
+</script>
+</body>
+</html>
