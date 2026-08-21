@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editable RGBA Color Picker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f5f5f7;
+      color: #333;
+    }
+    .card {
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 480px;
+    }
+    /* 상단 수정을 위한 텍스트 입력 영역 */
+    .header-code {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .code-input {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: #222;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      text-align: center;
+    }
+    .code-input:focus {
+      border-color: #0066cc;
+    }
+    .copy-btn {
+      background: #f0f0f2;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 0 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: background-color 0.2s;
+    }
+    .copy-btn:hover {
+      background-color: #e0e0e5;
+    }
+
+    /* 메인 컨테이너 */
+    .picker-container {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    /* 색상 미리보기 */
+    .preview-box-wrapper {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      overflow: hidden;
+      background-image: 
+        linear-gradient(45deg, #ccc 25%, transparent 25%), 
+        linear-gradient(-45deg, #ccc 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #ccc 75%), 
+        linear-gradient(-45deg, transparent 75%, #ccc 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    .preview-box {
+      width: 100%;
+      height: 100%;
+      transition: background-color 0.1s;
+    }
+
+    /* 컨트롤러 */
+    .controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .control-row label {
+      width: 16px;
+      font-weight: 600;
+      color: #555;
+    }
+    .control-row input[type="number"] {
+      width: 55px;
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .control-row input[type="range"] {
+      flex: 1;
+      cursor: pointer;
+    }
+
+    #rangeR { accent-color: #ff4d4d; }
+    #rangeG { accent-color: #2ecc71; }
+    #rangeB { accent-color: #3498db; }
+    #rangeA { accent-color: #555555; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <!-- 수정 가능한 상단 Input -->
+    <div class="header-code">
+      <input 
+        type="text" 
+        class="code-input" 
+        id="rgbaInput" 
+        value="rgba(92, 96, 99, 0.8)"
+      />
+      <button class="copy-btn" onclick="copyToClipboard()" id="copyBtn">복사</button>
+    </div>
+
+    <div class="picker-container">
+      <div class="preview-box-wrapper">
+        <div class="preview-box" id="previewBox"></div>
+      </div>
+
+      <div class="controls">
+        <div class="control-row">
+          <label>R</label>
+          <input type="number" id="numR" min="0" max="255">
+          <input type="range" id="rangeR" min="0" max="255">
+        </div>
+        <div class="control-row">
+          <label>G</label>
+          <input type="number" id="numG" min="0" max="255">
+          <input type="range" id="rangeG" min="0" max="255">
+        </div>
+        <div class="control-row">
+          <label>B</label>
+          <input type="number" id="numB" min="0" max="255">
+          <input type="range" id="rangeB" min="0" max="255">
+        </div>
+        <div class="control-row">
+          <label>A</label>
+          <input type="number" id="numA" min="0" max="1" step="0.01">
+          <input type="range" id="rangeA" min="0" max="1" step="0.01">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const channels = ['R', 'G', 'B', 'A'];
+    const rgbaInput = document.getElementById('rgbaInput');
+
+    // 슬라이더/숫자입력 컨트롤에서 값을 읽어 상단 텍스트 및 미리보기 업데이트
+    function updateFromControls() {
+      const r = document.getElementById('numR').value || 0;
+      const g = document.getElementById('numG').value || 0;
+      const b = document.getElementById('numB').value || 0;
+      const a = document.getElementById('numA').value || 1;
+
+      const rgbaString = `rgba(${r}, ${g}, ${b}, ${a})`;
+      
+      document.getElementById('previewBox').style.backgroundColor = rgbaString;
+      rgbaInput.value = rgbaString;
+    }
+
+    // 상단 텍스트 입력창 값을 감지하여 슬라이더 및 미리보기 연동
+    function updateFromTextInput() {
+      const val = rgbaInput.value.trim();
+      
+      // rgba(...) 문자열에서 숫자만 추출하는 정규식
+      const match = val.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+
+      if (match) {
+        const r = match[1];
+        const g = match[2];
+        const b = match[3];
+        const a = match[4] !== undefined ? match[4] : 1;
+
+        setControlValues(r, g, b, a);
+        document.getElementById('previewBox').style.backgroundColor = val;
+      }
+    }
+
+    // 컨트롤 UI에 값 일괄 적용
+    function setControlValues(r, g, b, a) {
+      document.getElementById('numR').value = r;
+      document.getElementById('rangeR').value = r;
+      document.getElementById('numG').value = g;
+      document.getElementById('rangeG').value = g;
+      document.getElementById('numB').value = b;
+      document.getElementById('rangeB').value = b;
+      document.getElementById('numA').value = a;
+      document.getElementById('rangeA').value = a;
+    }
+
+    // 슬라이더 및 각 채널 숫자입력 이벤트 리스너 등록
+    channels.forEach(ch => {
+      const numInput = document.getElementById(`num${ch}`);
+      const rangeInput = document.getElementById(`range${ch}`);
+
+      numInput.addEventListener('input', () => {
+        rangeInput.value = numInput.value;
+        updateFromControls();
+      });
+
+      rangeInput.addEventListener('input', () => {
+        numInput.value = rangeInput.value;
+        updateFromControls();
+      });
+    });
+
+    // 상단 입력창 변경 시 연동
+    rgbaInput.addEventListener('input', updateFromTextInput);
+
+    // 복사 기능
+    function copyToClipboard() {
+      rgbaInput.select();
+      navigator.clipboard.writeText(rgbaInput.value).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerText = '완료!';
+        setTimeout(() => { btn.innerText = '복사'; }, 1500);
+      });
+    }
+
+    // 초기 파싱 실행
+    updateFromTextInput();
+  </script>
+
+</body>
+</html>
