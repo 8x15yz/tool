@@ -130,6 +130,113 @@
       <div class="card-title">미니 시계</div>
       <div class="card-desc">현재 시간을 간단하게 확인</div>
     </a>
+    <a class="card" href="./facefocus.html">
+      <div class="card-icon">🎯</div>
+      <div class="card-title">Face Focus</div>
+      <div class="card-desc">영상 속 얼굴을 감지해서 선택한 얼굴을 자동으로 따라가는 포커싱 버전으로 다운로드</div>
+    </a>
+
+  </div>
+
+  <footer>로컬 전용 · 서버 없음</footer>
+</body>
+</html>
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+    }
+
+    header p {
+      margin-top: .4rem;
+      font-size: .875rem;
+      color: var(--text-muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.1rem;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: .65rem;
+      padding: 1.5rem 1.4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow .15s, transform .15s, border-color .15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+
+    .card:hover {
+      box-shadow: 0 6px 24px rgba(79,70,229,.13);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card-icon { font-size: 1.8rem; }
+
+    .card-title {
+      font-size: .975rem;
+      font-weight: 700;
+    }
+
+    .card-desc {
+      font-size: .8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      font-size: .72rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛠 Tools</h1>
+    <p>간단한 도구 모음</p>
+  </header>
+
+  <div class="grid">
+    <a class="card" href="./mdmemo.html">
+      <div class="card-icon">📝</div>
+      <div class="card-title">MD 에디터</div>
+      <div class="card-desc">마크다운 메모를 WYSIWYG 방식으로 빠르게 작성</div>
+    </a>
+    <a class="card" href="./schedule.html">
+      <div class="card-icon">📅</div>
+      <div class="card-title">ICS 일정 뷰어</div>
+      <div class="card-desc">Outlook · Teams · Google Calendar의 .ics 파일을 브라우저에서 바로 확인</div>
+    </a>
+    <a class="card" href="./removepath.html">
+      <div class="card-icon">🧹</div>
+      <div class="card-title">HTML 태그 제거</div>
+      <div class="card-desc">HTML/티스토리 태그와 스타일을 제거하고 순수 원문 텍스트만 추출</div>
+    </a>
+    <a class="card" href="./chess.html">
+      <div class="card-icon">♟</div>
+      <div class="card-title">Chess</div>
+      <div class="card-desc">드래그앤드롭으로 체스 대국 · Stockfish AI와 대전 또는 2인 로컬 플레이</div>
+    </a>
+    <a class="card" href="./colouepicker.html">
+      <div class="card-icon">🎨</div>
+      <div class="card-title">RGBA 컬러피커</div>
+      <div class="card-desc">R·G·B·A 슬라이더로 색상 조합 후 rgba() 코드 즉시 복사</div>
+    </a>
+    <a class="card" href="./miniclock.html">
+      <div class="card-icon">🕒</div>
+      <div class="card-title">미니 시계</div>
+      <div class="card-desc">현재 시간을 간단하게 확인</div>
+    </a>
     
   </div>
 
