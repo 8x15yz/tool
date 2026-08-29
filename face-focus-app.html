@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Focus — 얼굴 자동 포커싱 편집기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/human/3.3.6/human.js"></script>
+<style>
+  :root{
+    --bg:#0d0f12; --panel:#15181d; --line:#262b33; --text:#e8eaed;
+    --muted:#8b93a1; --accent:#5ee0c0; --accent-dim:#2a4a44; --danger:#e05e5e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:24px; display:flex; flex-direction:column; align-items:center; gap:20px;
+  }
+  h1{font-size:18px; font-weight:600; margin:0; letter-spacing:-0.02em;}
+  .sub{color:var(--muted); font-size:13px; margin-top:-14px;}
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px; width:100%; max-width:640px;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  button{
+    background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-dim);
+    padding:9px 16px; border-radius:8px; font-size:13px; cursor:pointer; font-weight:600;
+    transition:opacity .15s;
+  }
+  button:hover{opacity:.85;}
+  button:disabled{opacity:.35; cursor:not-allowed;}
+  button.primary{background:var(--accent); color:#062019; border-color:var(--accent);}
+  button.danger{background:#3a2222; color:var(--danger); border-color:#3a2222;}
+  select{
+    background:#1c2027; color:var(--text); border:1px solid var(--line);
+    padding:8px 10px; border-radius:8px; font-size:13px;
+  }
+  input[type=file]{font-size:13px; color:var(--muted);}
+  .stage{position:relative; width:100%; max-width:640px; background:#000; border-radius:10px; overflow:hidden;}
+  video{width:100%; display:block;}
+  canvas.overlay{position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;}
+  .status{font-size:12px; color:var(--muted); min-height:16px;}
+  .output-wrap{display:flex; justify-content:center;}
+  canvas#outCanvas{background:#000; border-radius:10px; max-width:280px; width:100%;}
+  .hint{font-size:12px; color:var(--muted); line-height:1.6;}
+  .badge{
+    display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px;
+    background:var(--accent-dim); color:var(--accent); font-weight:600;
+  }
+  a.dl{
+    color:var(--accent); font-size:13px; text-decoration:none; border-bottom:1px solid var(--accent-dim);
+  }
+</style>
+</head>
+<body>
+
+<h1>🎯 Face Focus</h1>
+<p class="sub">얼굴을 감지하고, 선택한 얼굴을 따라가며 크롭하는 프로토타입</p>
+
+<div class="panel">
+  <div class="row">
+    <input type="file" id="fileInput" accept="video/*">
+    <select id="aspect">
+      <option value="0.5625">9:16 (세로)</option>
+      <option value="1">1:1 (정사각)</option>
+      <option value="0.8">4:5</option>
+    </select>
+  </div>
+  <p class="hint" style="margin-top:10px;">
+    1) 영상을 올리면 자동으로 얼굴을 찾아 박스로 표시함 → 2) 원하는 얼굴 박스를 클릭해서 선택 → 3) 아래 버튼으로 포커싱 미리보기 후 다운로드
+  </p>
+</div>
+
+<div class="stage" id="stage" style="display:none;">
+  <video id="video" muted playsinline></video>
+  <canvas class="overlay" id="overlay"></canvas>
+</div>
+
+<div class="panel" id="controls" style="display:none;">
+  <div class="row">
+    <button id="btnDetect">얼굴 다시 찾기</button>
+    <span class="badge" id="selectedBadge">선택된 얼굴 없음</span>
+  </div>
+  <div class="row" style="margin-top:12px;">
+    <button id="btnPreview" class="primary" disabled>포커싱 미리보기 시작</button>
+    <button id="btnRecord" class="primary" disabled>녹화 + 다운로드</button>
+  </div>
+  <p class="status" id="status"></p>
+</div>
+
+<div class="output-wrap">
+  <canvas id="outCanvas" width="405" height="720" style="display:none;"></canvas>
+</div>
+
+<div id="downloadArea"></div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const stage = document.getElementById('stage');
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const octx = overlay.getContext('2d');
+const controls = document.getElementById('controls');
+const btnDetect = document.getElementById('btnDetect');
+const btnPreview = document.getElementById('btnPreview');
+const btnRecord = document.getElementById('btnRecord');
+const statusEl = document.getElementById('status');
+const selectedBadge = document.getElementById('selectedBadge');
+const outCanvas = document.getElementById('outCanvas');
+const outCtx = outCanvas.getContext('2d');
+const aspectSelect = document.getElementById('aspect');
+const downloadArea = document.getElementById('downloadArea');
+
+let human = null;
+let currentFaces = [];      // 마지막 감지 결과 (pixel 좌표)
+let target = null;          // { cx, cy, w, h } 부드럽게 이동하는 현재 크롭 중심/크기
+let selectedRef = null;     // 사용자가 선택한 얼굴의 마지막 위치 (매칭 기준)
+let previewLoopId = null;
+let recording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+
+async function initHuman(){
+  statusEl.textContent = 'AI 모델 불러오는 중...';
+  human = new Human.Human({
+    modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/[email protected]/models/',
+    face: {
+      enabled: true,
+      detector: { enabled: true, rotation: false, maxDetected: 8 },
+      mesh: { enabled: false },
+      iris: { enabled: false },
+      description: { enabled: false },
+      emotion: { enabled: false }
+    },
+    body: { enabled: false },
+    hand: { enabled: false },
+    object: { enabled: false },
+    segmentation: { enabled: false }
+  });
+  await human.load();
+  statusEl.textContent = '모델 준비 완료';
+}
+
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  video.src = url;
+  stage.style.display = 'block';
+  controls.style.display = 'block';
+  selectedRef = null;
+  target = null;
+  selectedBadge.textContent = '선택된 얼굴 없음';
+  btnPreview.disabled = true;
+  btnRecord.disabled = true;
+
+  video.onloadedmetadata = () => {
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+  };
+
+  if (!human) await initHuman();
+  video.currentTime = 0.1;
+  video.onseeked = async () => {
+    await detectAndDraw();
+    video.onseeked = null;
+  };
+});
+
+btnDetect.addEventListener('click', detectAndDraw);
+
+async function detectAndDraw(){
+  statusEl.textContent = '얼굴 탐지 중...';
+  const result = await human.detect(video);
+  currentFaces = result.face || [];
+  drawBoxes();
+  statusEl.textContent = `얼굴 ${currentFaces.length}개 발견 — 박스를 클릭해서 선택하세요`;
+}
+
+function drawBoxes(){
+  octx.clearRect(0, 0, overlay.width, overlay.height);
+  octx.lineWidth = 3;
+  octx.font = '16px sans-serif';
+  currentFaces.forEach((f, i) => {
+    const [x, y, w, h] = f.box;
+    const isSelected = selectedRef && isSameFace(f, selectedRef);
+    octx.strokeStyle = isSelected ? '#5ee0c0' : '#e8eaed88';
+    octx.strokeRect(x, y, w, h);
+    if (isSelected){
+      octx.fillStyle = '#5ee0c0';
+      octx.fillText('선택됨', x, y - 8);
+    }
+  });
+}
+
+function faceCenter(f){
+  const [x, y, w, h] = f.box;
+  return { cx: x + w/2, cy: y + h/2, w, h };
+}
+
+function isSameFace(f, ref){
+  const c = faceCenter(f);
+  const dist = Math.hypot(c.cx - ref.cx, c.cy - ref.cy);
+  return dist < Math.max(c.w, ref.w) * 0.6;
+}
+
+overlay.addEventListener('click', (e) => {
+  const rect = overlay.getBoundingClientRect();
+  const scaleX = overlay.width / rect.width;
+  const scaleY = overlay.height / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+
+  let closest = null, minDist = Infinity;
+  currentFaces.forEach(f => {
+    const c = faceCenter(f);
+    const d = Math.hypot(c.cx - clickX, c.cy - clickY);
+    if (d < minDist){ minDist = d; closest = f; }
+  });
+
+  if (closest){
+    selectedRef = faceCenter(closest);
+    target = { ...selectedRef };
+    selectedBadge.textContent = '얼굴 선택됨';
+    btnPreview.disabled = false;
+    btnRecord.disabled = false;
+    drawBoxes();
+  }
+});
+
+// 매 프레임마다 현재 타겟 위치를 기준으로 가장 가까운 얼굴을 찾아 매칭 + 스무딩
+async function trackFrame(){
+  const result = await human.detect(video);
+  const faces = result.face || [];
+  if (faces.length && selectedRef){
+    let closest = null, minDist = Infinity;
+    faces.forEach(f => {
+      const c = faceCenter(f);
+      const d = Math.hypot(c.cx - target.cx, c.cy - target.cy);
+      if (d < minDist){ minDist = d; closest = c; }
+    });
+    if (closest){
+      const alpha = 0.18; // 스무딩 강도 (낮을수록 부드럽고 느리게 따라감)
+      target.cx += (closest.cx - target.cx) * alpha;
+      target.cy += (closest.cy - target.cy) * alpha;
+      target.w += (closest.w - target.w) * alpha;
+      target.h += (closest.h - target.h) * alpha;
+    }
+  }
+  renderCropFrame();
+}
+
+function renderCropFrame(){
+  const aspect = parseFloat(aspectSelect.value); // width/height
+  const zoom = 3.2; // 얼굴 크기 대비 크롭 배율
+  let cropH = target.h * zoom;
+  let cropW = cropH * aspect;
+
+  // 크롭 영역이 원본 영상보다 크면 축소
+  if (cropW > video.videoWidth){ cropW = video.videoWidth; cropH = cropW / aspect; }
+  if (cropH > video.videoHeight){ cropH = video.videoHeight; cropW = cropH * aspect; }
+
+  let cropX = target.cx - cropW / 2;
+  let cropY = target.cy - cropH * 0.42; // 얼굴을 살짝 위쪽에 배치
+
+  cropX = Math.max(0, Math.min(cropX, video.videoWidth - cropW));
+  cropY = Math.max(0, Math.min(cropY, video.videoHeight - cropH));
+
+  outCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outCanvas.width, outCanvas.height);
+}
+
+function previewLoop(){
+  if (video.paused || video.ended) return;
+  trackFrame().then(() => {
+    previewLoopId = requestAnimationFrame(previewLoop);
+  });
+}
+
+btnPreview.addEventListener('click', async () => {
+  outCanvas.style.display = 'block';
+  video.currentTime = 0;
+  await video.play();
+  statusEl.textContent = '미리보기 재생 중 (탐지는 매 프레임 실행되어 느릴 수 있음)';
+  cancelAnimationFrame(previewLoopId);
+  previewLoop();
+});
+
+btnRecord.addEventListener('click', async () => {
+  if (recording) return;
+  recording = true;
+  recordedChunks = [];
+  outCanvas.style.display = 'block';
+  downloadArea.innerHTML = '';
+  video.currentTime = 0;
+
+  const canvasStream = outCanvas.captureStream(30);
+  try{
+    const videoStream = video.captureStream ? video.captureStream() : video.mozCaptureStream();
+    videoStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
+  } catch(err){
+    console.warn('오디오 트랙 캡처 실패, 무음으로 진행:', err);
+  }
+
+  let mimeType = 'video/webm;codecs=vp9,opus';
+  if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
+  mediaRecorder = new MediaRecorder(canvasStream, { mimeType });
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'face-focused.webm';
+    a.className = 'dl';
+    a.textContent = '⬇ 완성된 영상 다운로드 (face-focused.webm)';
+    downloadArea.innerHTML = '';
+    downloadArea.appendChild(a);
+    statusEl.textContent = '녹화 완료. 아래 링크로 다운로드하세요.';
+    recording = false;
+  };
+
+  mediaRecorder.start();
+  statusEl.textContent = '녹화 중... (영상이 끝나면 자동으로 저장됨)';
+  await video.play();
+  cancelAnimationFrame(previewLoopId);
+
+  const recordLoop = () => {
+    if (video.paused || video.ended){
+      mediaRecorder.stop();
+      return;
+    }
+    trackFrame().then(() => { previewLoopId = requestAnimationFrame(recordLoop); });
+  };
+  recordLoop();
+});
+
+video.addEventListener('pause', () => cancelAnimationFrame(previewLoopId));
+</script>
+</body>
+</html>
