@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF → Markdown 변환기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --border: #e2e2e6;
+    --text: #1c1c1f;
+    --muted: #6b6b74;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --ok: #1a7f37;
+    --warn: #b45309;
+    --err: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+                 "Noto Sans KR", Pretendard, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px;
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 28px; line-height: 1.5; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  #dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 36px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  #dropzone.drag { border-color: var(--accent); background: #f2f1fd; }
+  #dropzone p { margin: 6px 0; }
+  #dropzone .main { font-size: 15px; }
+  #dropzone .small { font-size: 12px; color: var(--muted); }
+  #fileInput { display: none; }
+  .filename { font-weight: 600; word-break: break-all; }
+  #log {
+    margin-top: 18px;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    color: var(--muted);
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .status-line { padding: 2px 0; }
+  .status-ok { color: var(--ok); }
+  .status-warn { color: var(--warn); }
+  .status-err { color: var(--err); }
+  #progressBarWrap {
+    margin-top: 14px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    display: none;
+  }
+  #progressBar { height: 100%; width: 0%; background: var(--accent); transition: width .15s; }
+  .actions { margin-top: 18px; display: none; }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    margin-left: 8px;
+  }
+  footer {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PDF → Markdown 변환기</h1>
+  <p class="sub">PDF 한 개를 업로드하면 브라우저에서 바로 텍스트를 마크다운으로, 이미지는 PNG로 추출해서
+    <code>이름.md</code> + <code>images/</code> 폴더가 든 zip으로 내려받습니다. 서버로 파일이 전송되지 않고
+    이 브라우저 안에서만 처리됩니다.</p>
+
+  <div class="card">
+    <div id="dropzone">
+      <p class="main">클릭해서 PDF 선택 또는 여기로 드래그</p>
+      <p class="small">텍스트 레이어가 있는 PDF만 지원 (스캔본은 텍스트 추출 불가)</p>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf,.pdf">
+
+    <div id="progressBarWrap"><div id="progressBar"></div></div>
+    <div id="log"></div>
+
+    <div class="actions" id="actions">
+      <button id="downloadBtn">zip 다시 받기</button>
+      <button class="secondary" id="resetBtn">다른 파일 변환</button>
+    </div>
+  </div>
+
+  <footer>
+    표/레이아웃 인식 없이 폰트 크기 기준으로 제목(#, ##, ###)을 추정하고, 문단은 줄 간격으로 구분합니다.
+    이미지 추출은 PDF에 실제로 포함된 래스터 이미지 기준이며 일부 벡터 그래픽·마스크 이미지는 빠질 수 있습니다.
+  </footer>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const logEl = document.getElementById('log');
+const progressBarWrap = document.getElementById('progressBarWrap');
+const progressBar = document.getElementById('progressBar');
+const actions = document.getElementById('actions');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+let lastZipBlob = null;
+let lastZipName = null;
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    handleFile(e.dataTransfer.files[0]);
+  }
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+});
+downloadBtn.addEventListener('click', () => {
+  if (lastZipBlob) triggerDownload(lastZipBlob, lastZipName);
+});
+resetBtn.addEventListener('click', () => {
+  logEl.innerHTML = '';
+  actions.style.display = 'none';
+  progressBarWrap.style.display = 'none';
+  progressBar.style.width = '0%';
+  fileInput.value = '';
+  lastZipBlob = null;
+});
+
+function logLine(msg, cls) {
+  const div = document.createElement('div');
+  div.className = 'status-line' + (cls ? ' ' + cls : '');
+  div.textContent = msg;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setProgress(ratio) {
+  progressBarWrap.style.display = 'block';
+  progressBar.style.width = Math.round(ratio * 100) + '%';
+}
+
+async function handleFile(file) {
+  logEl.innerHTML = '';
+  actions.style.display = 'none';
+  progressBar.style.width = '0%';
+  lastZipBlob = null;
+
+  if (!/\.pdf$/i.test(file.name)) {
+    logLine('PDF 파일이 아닙니다: ' + file.name, 'status-err');
+    return;
+  }
+
+  const stem = file.name.replace(/\.pdf$/i, '');
+  logLine('불러오는 중: ' + file.name);
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await convertPdfToMarkdown(arrayBuffer, stem, (msg) => logLine(msg));
+
+    if (!result.hasAnyText) {
+      logLine('[warn] 텍스트 레이어 없음(스캔본으로 추정) — 이미지만 추출됩니다.', 'status-warn');
+    }
+
+    logLine(`[ok] ${result.pageCount}페이지, 텍스트 ${result.markdown.length.toLocaleString()}자, 이미지 ${result.images.length}개`, 'status-ok');
+
+    logLine('zip 생성 중...');
+    const { blob, zipName } = await buildZip(stem, result.markdown, result.images);
+    lastZipBlob = blob;
+    lastZipName = zipName;
+    triggerDownload(blob, zipName);
+    logLine('[ok] 다운로드 시작: ' + zipName, 'status-ok');
+    actions.style.display = 'block';
+  } catch (err) {
+    console.error(err);
+    logLine('[fail] ' + (err && err.message ? err.message : String(err)), 'status-err');
+  }
+}
+
+// ---------- PDF -> Markdown ----------
+
+async function convertPdfToMarkdown(arrayBuffer, stem, onProgress) {
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdf = await loadingTask.promise;
+  const pageCount = pdf.numPages;
+
+  // Pass 1: collect text items per page + font-size histogram (weighted by char count)
+  const pagesData = [];
+  const fontSizeWeights = {};
+
+  for (let p = 1; p <= pageCount; p++) {
+    const page = await pdf.getPage(p);
+    const textContent = await page.getTextContent();
+    const items = textContent.items
+      .filter((it) => typeof it.str === 'string')
+      .map((it) => ({
+        str: it.str,
+        x: it.transform[4],
+        y: it.transform[5],
+        fontHeight: Math.hypot(it.transform[2], it.transform[3]) || Math.abs(it.transform[0]) || 1,
+      }));
+
+    items.forEach((it) => {
+      const trimmed = it.str.trim();
+      if (!trimmed) return;
+      const key = Math.round(it.fontHeight * 2) / 2;
+      fontSizeWeights[key] = (fontSizeWeights[key] || 0) + trimmed.length;
+    });
+
+    pagesData.push({ page, items });
+    onProgress(`[${p}/${pageCount}] 텍스트 읽는 중...`);
+  }
+
+  let bodySize = 0, bestWeight = -1;
+  for (const [size, weight] of Object.entries(fontSizeWeights)) {
+    if (weight > bestWeight) { bestWeight = weight; bodySize = parseFloat(size); }
+  }
+  if (!bodySize) bodySize = 10;
+
+  const hasAnyText = pagesData.some((pd) => pd.items.some((it) => it.str.trim()));
+
+  const images = [];
+  const mdParts = [];
+
+  for (let p = 1; p <= pageCount; p++) {
+    const { page, items } = pagesData[p - 1];
+
+    const lines = groupIntoLines(items);
+    const blockMd = linesToMarkdown(lines, bodySize);
+    if (blockMd.trim()) mdParts.push(blockMd);
+
+    onProgress(`[${p}/${pageCount}] 이미지 추출 중...`);
+    const pageImages = await extractPageImages(page, p, stem);
+    for (const img of pageImages) {
+      images.push(img);
+      mdParts.push(`![${img.name}](images/${img.name})`);
+    }
+  }
+
+  return {
+    markdown: mdParts.join('\n\n'),
+    images,
+    pageCount,
+    hasAnyText,
+  };
+}
+
+function groupIntoLines(items) {
+  const filtered = items.filter((it) => it.str.trim());
+  const sorted = [...filtered].sort((a, b) => b.y - a.y || a.x - b.x);
+  const tolerance = 2.5;
+  const lines = [];
+  for (const it of sorted) {
+    let line = lines.find((l) => Math.abs(l.y - it.y) <= tolerance);
+    if (!line) {
+      line = { y: it.y, items: [] };
+      lines.push(line);
+    }
+    line.items.push(it);
+  }
+  lines.sort((a, b) => b.y - a.y);
+  lines.forEach((l) => l.items.sort((a, b) => a.x - b.x));
+  return lines;
+}
+
+function linesToMarkdown(lines, bodySize) {
+  if (lines.length === 0) return '';
+  const out = [];
+  let paragraphBuffer = [];
+  let prevY = null;
+  let prevHeight = null;
+
+  function flushParagraph() {
+    if (paragraphBuffer.length) {
+      out.push(paragraphBuffer.join(' ').replace(/\s+/g, ' ').trim());
+      paragraphBuffer = [];
+    }
+  }
+
+  for (const line of lines) {
+    // merge items into text, adding a space where there's a visible x-gap
+    let text = '';
+    let lastEnd = null;
+    for (const it of line.items) {
+      if (lastEnd !== null && it.x - lastEnd > it.fontHeight * 0.3) text += ' ';
+      text += it.str;
+      lastEnd = it.x + it.str.length * it.fontHeight * 0.5;
+    }
+    text = text.trim();
+    if (!text) continue;
+
+    const dominantHeight = Math.max(...line.items.map((it) => it.fontHeight));
+    const ratio = dominantHeight / bodySize;
+
+    if (prevY !== null && prevHeight) {
+      const gap = prevY - line.y;
+      if (gap > prevHeight * 1.6) flushParagraph();
+    }
+
+    if (ratio >= 1.15 && text.length < 120) {
+      flushParagraph();
+      let level = 3;
+      if (ratio >= 1.6) level = 1;
+      else if (ratio >= 1.35) level = 2;
+      out.push('#'.repeat(level) + ' ' + text);
+    } else {
+      paragraphBuffer.push(text);
+    }
+
+    prevY = line.y;
+    prevHeight = dominantHeight;
+  }
+  flushParagraph();
+  return out.join('\n\n');
+}
+
+// ---------- Image extraction ----------
+
+// pdf.js exposes decoded images through an internal id/objs cache whose
+// timing and ids are unreliable for images nested inside Form XObjects or
+// transparency groups (they can simply never resolve). Instead we hook the
+// canvas 2D context's drawImage while pdf.js renders the page: whatever it
+// actually paints onto the canvas is captured directly. That sidesteps the
+// internal cache entirely and is what pdf.js itself relies on for display.
+async function extractPageImages(page, pageNum, stem) {
+  const viewport = page.getViewport({ scale: 1 });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.ceil(viewport.width));
+  canvas.height = Math.max(1, Math.ceil(viewport.height));
+  const ctx = canvas.getContext('2d');
+
+  const captured = [];
+  const seenSources = new WeakSet();
+  const originalDrawImage = ctx.drawImage.bind(ctx);
+  const MIN_SIZE = 8; // ignore tiny images (shading fills, 1px patterns, etc.)
+
+  ctx.drawImage = function (source, ...rest) {
+    try {
+      if (source && !seenSources.has(source)) {
+        const w = source.naturalWidth || source.videoWidth || source.width || 0;
+        const h = source.naturalHeight || source.videoHeight || source.height || 0;
+        if (w >= MIN_SIZE && h >= MIN_SIZE) {
+          seenSources.add(source);
+          // pdf.js reuses/clears its internal scratch canvases right after
+          // painting them, so a held reference to `source` can be stale by
+          // the time we'd read it later. Copy the pixels out synchronously,
+          // right now, into our own canvas instead.
+          const snap = document.createElement('canvas');
+          snap.width = w;
+          snap.height = h;
+          snap.getContext('2d').drawImage(source, 0, 0, w, h);
+          captured.push({ canvas: snap, width: w, height: h });
+        }
+      }
+    } catch (e) {
+      // ignore capture errors, still perform the real draw
+    }
+    return originalDrawImage(source, ...rest);
+  };
+
+  try {
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  } catch (e) {
+    console.warn('page render failed', pageNum, e);
+  } finally {
+    ctx.drawImage = originalDrawImage;
+  }
+
+  const results = [];
+  let idx = 0;
+  for (const item of captured) {
+    try {
+      const blob = await canvasToPngBlob(item.canvas);
+      if (!blob || blob.size === 0) continue;
+      idx++;
+      const name = `${stem}_p${String(pageNum).padStart(3, '0')}_${idx}.png`;
+      results.push({ name, blob });
+    } catch (e) {
+      console.warn('image capture -> blob failed', pageNum, e);
+    }
+  }
+  return results;
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve) => {
+    try {
+      canvas.toBlob((blob) => resolve(blob), 'image/png');
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+// ---------- Zip + download ----------
+
+async function buildZip(stem, markdown, images) {
+  const zip = new JSZip();
+  const header = `# ${stem}\n\n> 원본: \`${stem}.pdf\`\n\n---\n\n`;
+  zip.file(`${stem}.md`, header + markdown + '\n');
+
+  if (images.length) {
+    const folder = zip.folder('images');
+    for (const img of images) folder.file(img.name, img.blob);
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  return { blob, zipName: `${stem}.zip` };
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+</script>
+</body>
+</html>
