@@ -15,12 +15,27 @@
 :root{color-scheme:dark;--bg:#0f1320;--bg2:#171c2c;--panel:#1c2235;--line:#2d3550;--ink:#eef1f8;--mute:#9aa3bb;--accent:#ffd23f;
 --num:#2547d0;--add:#e3263d;--sub:#1f9a44;--mul:#f5a000;--div:#7a4bd1;--ok:#3ecf7a;--bad:#ff6b6b}
 *{box-sizing:border-box;min-width:0}
+[hidden]{display:none !important}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans KR",system-ui,sans-serif;overflow-x:clip}
 h1{font:400 clamp(30px,4.4vw,46px)/1.05 "Black Han Sans",sans-serif;margin:0;letter-spacing:.5px}
 .wrap{max-width:1240px;margin:0 auto;padding:clamp(18px,3vw,36px) max(4vw,14px) 48px}
 .top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:16px}
 .lede{color:var(--mute);margin:6px 0 0;max-width:62ch;font-size:15px}
 .goal{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.top{align-items:center;justify-content:flex-start}
+.goalcard{display:flex;align-items:stretch;background:linear-gradient(#0b0e18,#141a2b);border:2px solid var(--accent);border-radius:16px;box-shadow:0 0 0 4px rgba(255,210,63,.12),0 0 28px rgba(255,210,63,.18),inset 0 1px 0 rgba(255,255,255,.06);padding:8px 6px}
+.gc-item{display:grid;justify-items:center;padding:2px 22px}
+.gc-l{font-size:13px;color:var(--mute);font-weight:500}
+.gc-item b{font:700 clamp(44px,6vw,60px)/1 Fredoka,sans-serif;color:var(--accent);text-shadow:0 0 18px rgba(255,210,63,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
+.gc-item b small{font:700 .45em "Noto Sans KR",sans-serif;color:var(--ink);margin-left:4px;text-shadow:none}
+.gc-item:last-child b{color:#fff;text-shadow:none}
+.gc-sep{width:1px;background:var(--line);margin:6px 0}
+.goalcard.pop{animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06);box-shadow:0 0 0 6px rgba(255,210,63,.3),0 0 40px rgba(255,210,63,.4)}100%{transform:scale(1)}}
+.gc-actions{display:flex;gap:10px}
+#goalForm input{width:110px}
+.range{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.range input{width:72px}
 .goal label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 input,select,button{font:inherit;font-size:16px;color:var(--ink)}
 input,select{background:var(--bg2);border:1px solid var(--line);border-radius:10px;height:44px;padding:0 12px}
@@ -33,7 +48,7 @@ button.pri:hover:not(:disabled){background:#ffe070}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .badge{display:flex;align-items:baseline;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 16px;white-space:nowrap}
 .badge b{font:700 34px/1 Fredoka,sans-serif;color:var(--accent)}
-.stage{position:relative;background:radial-gradient(120% 90% at 50% 0%,#26304a 0%,#151a29 55%,#0d1019 100%);border:1px solid var(--line);border-radius:18px;padding:14px 10px 0;overflow:hidden}
+.stage{position:relative;padding-bottom:10px !important;background:radial-gradient(120% 90% at 50% 0%,#26304a 0%,#151a29 55%,#0d1019 100%);border:1px solid var(--line);border-radius:18px;padding:14px 10px 0;overflow:hidden}
 #scene{position:relative;width:100%;--d:280ms;transition:height .3s ease}
 .tray{position:absolute;left:1%;right:1%;bottom:0;border-radius:10px 10px 0 0;background:linear-gradient(#56607a,#3a4256 30%,#2c3346);box-shadow:inset 0 2px 0 #7b86a3}
 .col{position:absolute;top:0;bottom:0;border:0;background:transparent;border-radius:12px;padding:0;cursor:pointer}
@@ -94,6 +109,12 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
  .lede{font-size:13.5px;margin-top:4px}
  .top{margin-bottom:10px;gap:10px}
  .goal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;gap:8px}
+ #goalForm{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+ #goalForm input{width:100%}
+ .goalcard{width:100%;justify-content:center}
+ .gc-item{flex:1;padding:2px 8px}
+ .gc-actions{width:100%}
+ .gc-actions button{flex:1}
  .goal label{font-size:12px}
  .goal input,.goal select{width:100%;padding:0 8px;font-size:16px}
  .stage{border-radius:14px;padding:8px 4px 0;margin:0 -2px}
@@ -117,23 +138,33 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
  #verdict .big{font-size:32px}
  ol#moves{max-height:none;font-size:14px}
 }
-@media(prefers-reduced-motion:reduce){.blk{transition:none}}
+@media(prefers-reduced-motion:reduce){.blk{transition:none}.goalcard.pop{animation:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
  <div class="top">
-  <div class="goal">
-   <label>목표 숫자<input id="gTarget" type="number" step="any" value="94"></label>
-   <label>층수<input id="gFloors" type="number" min="1" max="12" value="4"></label>
+  <div class="goalcard" id="goalCard" aria-live="polite">
+   <div class="gc-item"><span class="gc-l">목표 숫자</span><b id="gTargetView">94</b></div>
+   <div class="gc-sep"></div>
+   <div class="gc-item"><span class="gc-l">층수</span><b><span id="gFloorsView">4</span><small>층</small></b></div>
   </div>
+  <div class="gc-actions">
+   <button class="pri" id="randGoal">랜덤 문제</button>
+   <button id="editGoal" aria-expanded="false" aria-controls="goalForm">직접 설정</button>
+  </div>
+  <form class="goal" id="goalForm" hidden>
+   <label>목표 숫자<input id="gTarget" type="number" step="any" value="94"></label>
+   <label>층수<input id="gFloors" type="number" min="1" value="4"></label>
+   <button class="pri" type="submit">적용</button>
+  </form>
+  <p class="note" id="goalMsg" style="margin:0;width:100%"></p>
  </div>
 
  <div id="banner" role="status"></div>
 
  <div class="stage">
   <div id="scene" aria-label="블록 무대"></div>
-  <div class="reads" id="reads"></div>
  </div>
 
  <div class="dock" id="dock">
@@ -182,7 +213,9 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
   <div class="goal" style="margin:8px 0 14px">
    <label>완성 기둥<select id="gPed"></select></label>
    <label>계산 순서<select id="gPrec"><option value="ltr">위에서부터 순서대로</option><option value="prec">곱셈·나눗셈 먼저</option></select></label>
+   <label>랜덤 문제 층수<span class="range"><input id="rMin" type="number" min="2" value="3"> ~ <input id="rMax" type="number" min="2" value="6"></span></label>
   </div>
+  <p class="note" id="floorNote" style="margin:-6px 0 12px"></p>
   <ul class="rules">
    <li>블록을 누르면 그 블록부터 맨 위까지 한 덩어리로 들립니다. 몇 개를 들든 <b>1번 이동</b>입니다.</li>
    <li>든 덩어리는 그대로 놓거나, <b>180° 뒤집어</b> 순서를 거꾸로 놓을 수 있습니다.</li>
@@ -196,7 +229,7 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
   <div class="bar">
    <button class="pri" id="apply">이 배치로 시작</button>
    <button id="photo">사진 속 배치</button>
-   <button id="rand">블록 섞어 랜덤 문제</button>
+   <button id="rand">블록도 섞어서 랜덤 문제</button>
    <span id="edMsg" class="note" style="margin:0"></span>
   </div>
  </details>
@@ -271,7 +304,7 @@ function solve(input, post) {
   if (floors >= 1 && floors <= B) for (const n of nums) rec(n);
   const exprCount = seen.size;
   if (!cands.length) {
-    post({ type: 'none', reason: 'nocombo', exprCount: 0 });
+    post({ type: 'none', reason: 'nocombo', exprCount: 0, capped: enumCount > ENUM_CAP });
     return;
   }
 
@@ -393,7 +426,7 @@ function solve(input, post) {
     nextBound = Infinity; tt = new Map();
     post({ type: 'progress', bound, nodes });
     if (dfs(0, bound, -1, 0, -1, 0)) {
-      post({ type: 'done', moves: path.slice(), length: path.length, nodes, exprCount });
+      post({ type: 'done', moves: path.slice(), length: path.length, nodes, exprCount, capped: enumCount > ENUM_CAP });
       return;
     }
     if (aborted) { post({ type: 'none', reason: 'limit', bound, nodes, exprCount }); return; }
@@ -415,10 +448,10 @@ const $ = s => document.querySelector(s);
 const PHOTO = ["3 -2 +5", "x5 +3 5 +2", "-7 x2 x7 -5 2 -3 7", "x3 +7"];
 const OPS = { '+': 'add', '-': 'sub', '−': 'sub', 'x': 'mul', '×': 'mul', '*': 'mul', '÷': 'div', '/': 'div' };
 const SYM = { add: '+', sub: '−', mul: '×', div: '÷' };
-const scene = $('#scene'), reads = $('#reads');
+const scene = $('#scene');
 let blocks = [], init = [], cur = [], hist = [], sel = null, busy = false, els = [], G = null;
 let edLines = PHOTO.slice();
-let cfg = { target: 94, floors: 4, ped: 'any', prec: false };
+let cfg = { target: 94, floors: 4, ped: 'any', prec: false, rMin: 3, rMax: 6 };
 let solution = null, simIdx = 0, playing = false, simMode = false;
 let speed = 1, worker = null, cache = new Map();
 
@@ -497,7 +530,6 @@ function buildScene() {
     e.onclick = ev => { ev.stopPropagation(); onBlock(i); };
     scene.append(e); return e;
   });
-  reads.style.gridTemplateColumns = `repeat(${G.P},minmax(0,1fr))`;
   layout(true);
 }
 function order(p) { // display order bottom->top for stack p
@@ -529,14 +561,6 @@ function paint() {
     c.classList.toggle('win', w === p);
     c.classList.toggle('drop', !!sel && sel.s !== p);
   });
-  reads.innerHTML = '';
-  for (let p = 0; p < cur.length; p++) {
-    const i = stackInfo(p), d = document.createElement('div');
-    const b = document.createElement('b'); b.textContent = `기둥 ${p + 1} · ${i.t}`; d.append(b);
-    if (i.e || i.x) { const s = document.createElement('span'); s.textContent = i.e || i.x; if (i.x) s.style.opacity = .7; d.append(s); }
-    if (w === p) d.className = 'w';
-    reads.append(d);
-  }
   $('#count').textContent = hist.length;
   $('#undo').disabled = !hist.length || busy;
   // hand
@@ -666,6 +690,7 @@ function getSolution() {
   });
 }
 function noSolText(r) {
+  if (r.reason === 'nocombo' && r.capped) return `<span class="warn">${cfg.floors}층은 조합이 너무 많아 일부만 확인했는데, 그 안에서는 만들 수 없었어요.</span>`;
   if (r.reason === 'nocombo') return `<span class="err">이 블록들로는 ${fmt(cfg.target)}을(를) ${cfg.floors}층 식으로 만들 수 없어요.</span> 목표 숫자, 층수, 계산 순서를 확인해 보세요.`;
   return `<span class="warn">14번 이동 안에서는 해를 찾지 못했어요.</span>`;
 }
@@ -677,6 +702,11 @@ async function judge(withAns) {
   let r; try { r = await getSolution(); } catch (e) { return; }
   if (r.type !== 'done') { v.innerHTML = noSolText(r); setSolution(null); return; }
   const M = r.length; setSolution(r.moves);
+  const capNote = r.capped ? '<br><span class="note">층수가 많아 조합을 일부만 확인했어요. 실제 최소는 이보다 적을 수 있어요.</span>' : '';
+  if (r.capped) { judgeOut(withAns, M, a, v); v.innerHTML += capNote; return; }
+  judgeOut(withAns, M, a, v);
+}
+function judgeOut(withAns, M, a, v) {
   if (!withAns) { v.innerHTML = `<span class="big">${M}</span>번이 최소 이동 수예요.`; return; }
   const n = +a;
   if (n === M) v.innerHTML = `<span class="big good">정답</span> 최소 <b>${M}번</b>이 맞아요.`;
@@ -722,8 +752,15 @@ $('#simReset').onclick = () => { if (busy) return; playing = false; simMode = fa
 $('#speed').oninput = e => { speed = +e.target.value; };
 
 /* ---------- goal & editor ---------- */
+const maxFloors = () => 1 + blocks.filter(b => b.type !== 'num').length;
+const RAND_MAX_F = 8;
 function syncGoalUI() {
   $('#gTarget').value = cfg.target; $('#gFloors').value = cfg.floors; $('#gPrec').value = cfg.prec ? 'prec' : 'ltr';
+  $('#gTargetView').textContent = fmt(cfg.target); $('#gFloorsView').textContent = cfg.floors;
+  const mf = maxFloors();
+  $('#gFloors').max = mf; $('#rMin').max = Math.min(mf, RAND_MAX_F); $('#rMax').max = Math.min(mf, RAND_MAX_F);
+  $('#rMin').value = cfg.rMin; $('#rMax').value = cfg.rMax;
+  $('#floorNote').textContent = `지금 블록으로 쌓을 수 있는 최대 층수는 ${mf}층이에요(숫자 1개 + 연산 블록 ${mf - 1}개). 랜덤 출제는 ${Math.min(mf, RAND_MAX_F)}층까지이고, 9층 이상은 직접 설정만 가능하며 최소 수가 정확하지 않을 수 있어요.`;
   const s = $('#gPed'); s.innerHTML = '<option value="any">아무 기둥</option>' + init.map((_, i) => `<option value="${i}">기둥 ${i + 1}</option>`).join('');
   if (cfg.ped !== 'any' && +cfg.ped >= init.length) cfg.ped = 'any';
   s.value = cfg.ped;
@@ -731,12 +768,86 @@ function syncGoalUI() {
 function goalChanged() {
   const t = parseFloat($('#gTarget').value), f = parseInt($('#gFloors').value, 10);
   if (!isNaN(t)) cfg.target = t;
-  if (f >= 1 && f <= 12) cfg.floors = f;
+  if (f >= 1) cfg.floors = Math.min(f, maxFloors());
   cfg.ped = $('#gPed').value; cfg.prec = $('#gPrec').value === 'prec';
-  save(); setSolution(null); $('#verdict').textContent = ''; $('#prog').textContent = ''; paint();
+  save(); syncGoalUI(); setSolution(null); $('#verdict').textContent = ''; $('#prog').textContent = ''; paint();
   if (winPed() === undefined) banner();
 }
-['#gTarget', '#gFloors', '#gPed', '#gPrec'].forEach(s => $(s).addEventListener('change', goalChanged));
+['#gPed', '#gPrec'].forEach(s => $(s).addEventListener('change', goalChanged));
+$('#goalForm').addEventListener('submit', e => {
+  e.preventDefault(); goalChanged(); popGoal();
+  $('#goalForm').hidden = true; $('#editGoal').setAttribute('aria-expanded', 'false'); $('#goalMsg').textContent = '';
+});
+$('#editGoal').onclick = () => {
+  const f = $('#goalForm'); f.hidden = !f.hidden;
+  $('#editGoal').setAttribute('aria-expanded', String(!f.hidden));
+  if (!f.hidden) { syncGoalUI(); $('#gTarget').focus(); $('#gTarget').select(); }
+};
+['#rMin', '#rMax'].forEach(s => $(s).addEventListener('change', () => {
+  const mf = Math.min(maxFloors(), RAND_MAX_F);
+  let a = parseInt($('#rMin').value, 10) || 2, b = parseInt($('#rMax').value, 10) || a;
+  a = Math.max(2, Math.min(a, mf)); b = Math.max(a, Math.min(b, mf));
+  cfg.rMin = a; cfg.rMax = b; save(); syncGoalUI();
+}));
+function popGoal() { const c = $('#goalCard'); c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
+
+/* ---------- random goal: only targets 1~99 that these blocks can actually make ---------- */
+function achievable(N, lo, hi) {
+  const nums = [], ops = [];
+  blocks.forEach((b, i) => (b.type === 'num' ? nums : ops).push(i));
+  ops.sort((a, b) => label(blocks[a]).localeCompare(label(blocks[b])));
+  const out = new Set(), used = new Uint8Array(blocks.length), seq = [0];
+  const rec = () => {
+    if (seq.length === N) {
+      const v = evalExpr(blocks, seq, cfg.prec), r = Math.round(v);
+      if (v !== null && Math.abs(v - r) < 1e-9 && r >= lo && r <= hi) out.add(r);
+      return;
+    }
+    let prev = null;
+    for (const o of ops) {
+      if (used[o]) continue;
+      const l = label(blocks[o]); if (l === prev) continue; prev = l; // skip identical-looking blocks at the same depth
+      used[o] = 1; seq.push(o); rec(); seq.pop(); used[o] = 0;
+    }
+  };
+  let perms = 1; for (let i = 0; i < N - 1; i++) perms *= ops.length - i;
+  if (perms * nums.length > 400000) { // too many orders: sample random towers instead
+    for (let t = 0; t < 150000; t++) {
+      const pool = ops.slice(), s = [nums[Math.floor(Math.random() * nums.length)]];
+      for (let i = 0; i < N - 1; i++) s.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+      const v = evalExpr(blocks, s, cfg.prec), r = Math.round(v);
+      if (v !== null && Math.abs(v - r) < 1e-9 && r >= lo && r <= hi) out.add(r);
+    }
+    return [...out];
+  }
+  const seenNum = new Set();
+  for (const n of nums) { if (seenNum.has(blocks[n].val)) continue; seenNum.add(blocks[n].val); seq[0] = n; rec(); }
+  return [...out];
+}
+function randomGoal() {
+  const mf = Math.min(maxFloors(), RAND_MAX_F);
+  const a = Math.max(2, Math.min(cfg.rMin, mf)), b = Math.max(a, Math.min(cfg.rMax, mf));
+  const floors = []; for (let f = a; f <= b; f++) floors.push(f);
+  floors.sort(() => Math.random() - .5);
+  const saved = { target: cfg.target, floors: cfg.floors };
+  for (const N of floors) {
+    const vals = achievable(N, 1, 99).filter(t => {
+      cfg.target = t; cfg.floors = N;
+      return winPed() === undefined && !(t === saved.target && N === saved.floors); // skip already-solved and the same problem
+    });
+    if (vals.length) {
+      cfg.target = vals[Math.floor(Math.random() * vals.length)]; cfg.floors = N;
+      save(); syncGoalUI(); setSolution(null); $('#verdict').textContent = ''; $('#prog').textContent = ''; $('#ans').value = '';
+      $('#goalForm').hidden = true; $('#editGoal').setAttribute('aria-expanded', 'false');
+      $('#goalMsg').textContent = ''; paint(); popGoal();
+      return true;
+    }
+  }
+  Object.assign(cfg, saved);
+  $('#goalMsg').textContent = `${a}~${b}층으로 1~99를 만들 수 있는 조합이 없어요. 층수 범위를 바꿔 보세요.`;
+  return false;
+}
+$('#randGoal').onclick = () => { if (busy) return; stopSim(); resetBoard(); randomGoal(); };
 function renderEditor() {
   const P = +$('#pCount').value; while (edLines.length < P) edLines.push(''); 
   const ed = $('#ed'); ed.innerHTML = '';
@@ -757,25 +868,15 @@ function load(lines) {
   return true;
 }
 $('#apply').onclick = () => { const P = +$('#pCount').value; if (load(edLines.slice(0, P))) $('#edMsg').textContent = '새 배치로 시작했어요.'; };
-$('#photo').onclick = () => { $('#pCount').value = 4; edLines = PHOTO.slice(); renderEditor(); cfg = { target: 94, floors: 4, ped: 'any', prec: false }; load(edLines); };
+$('#photo').onclick = () => { $('#pCount').value = 4; edLines = PHOTO.slice(); renderEditor(); Object.assign(cfg, { target: 94, floors: 4, ped: 'any', prec: false }); load(edLines); popGoal(); };
 $('#rand').onclick = () => {
+  if (busy) return;
   const P = +$('#pCount').value, ids = blocks.map((_, i) => i);
-  const nums = ids.filter(i => blocks[i].type === 'num'), ops = ids.filter(i => blocks[i].type !== 'num');
-  if (!nums.length) { $('#edMsg').textContent = '숫자 블록이 필요해요.'; return; }
-  let t = null, N = 3;
-  for (let tries = 0; tries < 300 && t === null; tries++) {
-    N = 3 + Math.floor(Math.random() * Math.min(3, ops.length - 1));
-    const pick = ops.slice().sort(() => Math.random() - .5).slice(0, N - 1);
-    const v = evalExpr(blocks, [nums[Math.floor(Math.random() * nums.length)], ...pick], cfg.prec);
-    if (v !== null && Number.isInteger(v) && Math.abs(v) < 1000) t = v;
-  }
-  if (t === null) { $('#edMsg').textContent = '연산 블록이 부족해요.'; return; }
   const st = Array.from({ length: P }, () => []);
   ids.sort(() => Math.random() - .5).forEach((id, j) => st[j < P ? j : Math.floor(Math.random() * P)].push(id));
   const lines = st.map(s => s.slice().reverse().map(i => label(blocks[i]).replace('−', '-').replace('×', 'x').replace('÷', '/')).join(' '));
-  cfg.target = t; cfg.floors = N; cfg.ped = 'any';
   edLines = lines; renderEditor(); load(lines);
-  $('#edMsg').textContent = `새 문제: ${t}을(를) ${N}층으로.`;
+  if (randomGoal()) $('#edMsg').textContent = `새 문제: ${fmt(cfg.target)}을(를) ${cfg.floors}층으로.`;
 };
 
 let lastW = 0;
