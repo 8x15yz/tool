@@ -123,15 +123,9 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
 <body>
 <div class="wrap">
  <div class="top">
-  <div>
-   <h1>블록 연산 탑</h1>
-   <p class="lede">블록을 들어 다른 기둥으로 옮겨, 목표 숫자를 정해진 층수로 쌓으세요. 맨 위는 남색 숫자 블록, 식은 위에서 아래로 읽습니다.</p>
-  </div>
   <div class="goal">
    <label>목표 숫자<input id="gTarget" type="number" step="any" value="94"></label>
    <label>층수<input id="gFloors" type="number" min="1" max="12" value="4"></label>
-   <label>완성 기둥<select id="gPed"></select></label>
-   <label>계산 순서<select id="gPrec"><option value="ltr">위에서부터 순서대로</option><option value="prec">곱셈·나눗셈 먼저</option></select></label>
   </div>
  </div>
 
@@ -185,6 +179,10 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
 
  <details class="card" id="edWrap">
   <summary>퍼즐 편집 · 규칙</summary>
+  <div class="goal" style="margin:8px 0 14px">
+   <label>완성 기둥<select id="gPed"></select></label>
+   <label>계산 순서<select id="gPrec"><option value="ltr">위에서부터 순서대로</option><option value="prec">곱셈·나눗셈 먼저</option></select></label>
+  </div>
   <ul class="rules">
    <li>블록을 누르면 그 블록부터 맨 위까지 한 덩어리로 들립니다. 몇 개를 들든 <b>1번 이동</b>입니다.</li>
    <li>든 덩어리는 그대로 놓거나, <b>180° 뒤집어</b> 순서를 거꾸로 놓을 수 있습니다.</li>
