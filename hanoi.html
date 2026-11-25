@@ -28,7 +28,14 @@ h1{font:400 clamp(30px,4.4vw,46px)/1.05 "Black Han Sans",sans-serif;margin:0;let
 .gc-l{font-size:13px;color:var(--mute);font-weight:500}
 .gc-item b{font:700 clamp(44px,6vw,60px)/1 Fredoka,sans-serif;color:var(--accent);text-shadow:0 0 18px rgba(255,210,63,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
 .gc-item b small{font:700 .45em "Noto Sans KR",sans-serif;color:var(--ink);margin-left:4px;text-shadow:none}
-.gc-item:last-child b{color:#fff;text-shadow:none}
+.gc-floors b{color:#fff;text-shadow:none}
+.gc-time b{color:#fff;text-shadow:none;font-size:clamp(34px,4.6vw,46px);align-self:end;min-width:4.3ch;text-align:center}
+.gc-time.run b{color:#7fd9ff}
+.gc-time.done b{color:var(--ok)}
+.gc-time.stop b{color:var(--mute)}
+.readyLay{position:absolute;inset:0;z-index:150;display:grid;place-content:center;justify-items:center;gap:10px;background:rgba(10,13,22,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);text-align:center;padding:20px}
+.readyLay button{font:700 26px/1 "Noto Sans KR",sans-serif;padding:0 44px;min-height:64px;border-radius:16px;box-shadow:0 0 30px rgba(255,210,63,.35)}
+.readyLay p{margin:0;color:#d6dbe8;font-size:15px}
 .gc-sep{width:1px;background:var(--line);margin:6px 0}
 .goalcard.pop{animation:pop .5s ease}
 @keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06);box-shadow:0 0 0 6px rgba(255,210,63,.3),0 0 40px rgba(255,210,63,.4)}100%{transform:scale(1)}}
@@ -112,7 +119,10 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
  #goalForm{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
  #goalForm input{width:100%}
  .goalcard{width:100%;justify-content:center}
- .gc-item{flex:1;padding:2px 8px}
+ .gc-item{flex:1;padding:2px 6px}
+ .gc-item b{font-size:40px}
+ .gc-time b{font-size:28px;margin-bottom:4px}
+ .gc-l{font-size:12px}
  .gc-actions{width:100%}
  .gc-actions button{flex:1}
  .goal label{font-size:12px}
@@ -147,11 +157,14 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
   <div class="goalcard" id="goalCard" aria-live="polite">
    <div class="gc-item"><span class="gc-l">목표 숫자</span><b id="gTargetView">94</b></div>
    <div class="gc-sep"></div>
-   <div class="gc-item"><span class="gc-l">층수</span><b><span id="gFloorsView">4</span><small>층</small></b></div>
+   <div class="gc-item gc-floors"><span class="gc-l">층수</span><b><span id="gFloorsView">4</span><small>층</small></b></div>
+   <div class="gc-sep gc-tsep"></div>
+   <div class="gc-item gc-time" id="tItem"><span class="gc-l" id="tLabel">시간</span><b id="tView">0:00.0</b></div>
   </div>
   <div class="gc-actions">
    <button class="pri" id="randGoal">랜덤 문제</button>
    <button id="editGoal" aria-expanded="false" aria-controls="goalForm">직접 설정</button>
+   <button id="retry" hidden>다시 도전</button>
   </div>
   <form class="goal" id="goalForm" hidden>
    <label>목표 숫자<input id="gTarget" type="number" step="any" value="94"></label>
@@ -165,6 +178,10 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
 
  <div class="stage">
   <div id="scene" aria-label="블록 무대"></div>
+  <div class="readyLay" id="readyLay" hidden>
+   <button class="pri" id="startBtn">시작</button>
+   <p>누르면 목표가 공개되고 시간이 흐르기 시작해요.</p>
+  </div>
  </div>
 
  <div class="dock" id="dock">
@@ -198,13 +215,13 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
   <section class="card">
    <h2>최소 풀이 시뮬레이션</h2>
    <div class="bar">
-    <button class="pri" id="play" disabled>▶ 재생</button>
-    <button id="step" disabled>다음 한 수</button>
-    <button id="simReset" disabled>처음부터</button>
+    <button class="pri" id="play">▶ 재생</button>
+    <button id="step">다음 한 수</button>
+    <button id="simReset">처음부터</button>
     <label class="note" style="margin:0;display:flex;align-items:center;gap:6px">속도<input id="speed" type="range" min="0.5" max="3" step="0.25" value="1"></label>
    </div>
    <ol id="moves"></ol>
-   <p class="note" id="simNote">채점이나 정답 보기를 하면 최소 수순이 여기에 나옵니다.</p>
+   <p class="note" id="simNote">재생을 누르면 최소 수순을 계산해서 처음 배치부터 옮겨 보여줘요.</p>
   </section>
  </div>
 
@@ -213,6 +230,7 @@ input[type=range]{height:auto;padding:0;accent-color:var(--accent);width:120px}
   <div class="goal" style="margin:8px 0 14px">
    <label>완성 기둥<select id="gPed"></select></label>
    <label>계산 순서<select id="gPrec"><option value="ltr">위에서부터 순서대로</option><option value="prec">곱셈·나눗셈 먼저</option></select></label>
+   <label>시간 측정<select id="gTimer"><option value="button">시작 버튼을 누를 때부터</option><option value="touch">첫 블록을 들 때부터</option><option value="off">끄기</option></select></label>
    <label>랜덤 문제 층수<span class="range"><input id="rMin" type="number" min="2" value="3"> ~ <input id="rMax" type="number" min="2" value="6"></span></label>
   </div>
   <p class="note" id="floorNote" style="margin:-6px 0 12px"></p>
@@ -451,7 +469,7 @@ const SYM = { add: '+', sub: '−', mul: '×', div: '÷' };
 const scene = $('#scene');
 let blocks = [], init = [], cur = [], hist = [], sel = null, busy = false, els = [], G = null;
 let edLines = PHOTO.slice();
-let cfg = { target: 94, floors: 4, ped: 'any', prec: false, rMin: 3, rMax: 6 };
+let cfg = { target: 94, floors: 4, ped: 'any', prec: false, rMin: 3, rMax: 6, timer: 'button' };
 let solution = null, simIdx = 0, playing = false, simMode = false;
 let speed = 1, worker = null, cache = new Map();
 
@@ -610,6 +628,7 @@ async function perform(m, manual) {
   await wait(350 * D);
   cur[m.s].splice(cur[m.s].length - m.k); cur[m.d].push(...disp);
   hist.push({ s: m.s, k: m.k, d: m.d, flip: !!m.flip });
+  if (manual && winPed() !== undefined) timerStop('완성');
   sel = null; setDur(260 * D); layout(); await wait(270 * D);
   setRows(needRows(), true);
   busy = false; paint();
@@ -623,6 +642,7 @@ function onBlock(id) {
   const p = cur.findIndex(s => s.includes(id));
   if (sel && sel.s !== p) return onCol(p);
   stopSim();
+  if (cfg.timer === 'touch') timerStart();
   const k = cur[p].length - cur[p].indexOf(id);
   if (sel && sel.k === k) { sel = null; layout(); return; }
   sel = { s: p, k, flip: false }; setRows(needRows()); setDur(200); layout();
@@ -651,6 +671,44 @@ document.addEventListener('keydown', e => {
 });
 function resetBoard() { cur = init.map(s => s.slice()); hist = []; sel = null; setRows(needRows(), true); setDur(300); layout(); banner(); }
 
+/* ---------- timer ---------- */
+// idle: not started · run: counting · done: stopped (label says why)
+let tState = 'idle', tStart = 0, tElapsed = 0, tTick = null, tReason = '';
+const fmtTime = ms => { const s = ms / 1000, mm = Math.floor(s / 60), ss = s - mm * 60; return `${mm}:${ss < 10 ? '0' : ''}${ss.toFixed(1)}`; };
+function showTimer() {
+  const on = cfg.timer !== 'off';
+  $('#tItem').hidden = !on; document.querySelector('.gc-tsep').hidden = !on;
+  const ms = tState === 'run' ? performance.now() - tStart : tElapsed;
+  $('#tView').textContent = fmtTime(ms);
+  $('#tItem').className = 'gc-item gc-time' + (tState === 'run' ? ' run' : tState === 'done' ? (tReason === '완성' ? ' done' : ' stop') : '');
+  $('#tLabel').textContent = tState === 'done' ? tReason : tState === 'run' ? '진행 중' : '시간';
+  const hide = on && cfg.timer === 'button' && tState === 'idle';
+  $('#readyLay').hidden = !hide;
+  $('#gTargetView').textContent = hide ? '?' : fmt(cfg.target);
+  $('#gFloorsView').textContent = hide ? '?' : cfg.floors;
+  $('#retry').hidden = !on || tState === 'idle';
+}
+function timerReset() { clearInterval(tTick); tState = 'idle'; tElapsed = 0; tReason = ''; showTimer(); }
+function timerStart() {
+  if (cfg.timer === 'off' || tState !== 'idle') return;
+  tState = 'run'; tStart = performance.now(); clearInterval(tTick);
+  tTick = setInterval(showTimer, 100); showTimer();
+}
+function timerStop(reason) {
+  if (tState !== 'run') return null;
+  clearInterval(tTick); tElapsed = performance.now() - tStart; tState = 'done'; tReason = reason; showTimer();
+  return tElapsed;
+}
+const bestKey = () => 'bt|' + JSON.stringify([init, blocks.map(label), cfg.target, cfg.floors, cfg.ped, cfg.prec]);
+function bestTime(ms) { // returns previous best, saves new best
+  let prev = null;
+  try { prev = +localStorage.getItem(bestKey()) || null; if (!prev || ms < prev) localStorage.setItem(bestKey(), String(Math.round(ms))); } catch (e) {}
+  return prev;
+}
+$('#startBtn').onclick = () => { timerStart(); popGoal(); };
+$('#retry').onclick = () => { if (busy) return; stopSim(); resetBoard(); setSolution(null); $('#verdict').textContent = ''; $('#ans').value = ''; timerReset(); if (cfg.timer !== 'button') popGoal(); };
+$('#gTimer').addEventListener('change', () => { cfg.timer = $('#gTimer').value; save(); timerReset(); });
+
 /* ---------- banner / win ---------- */
 function banner(html, cls) {
   const b = $('#banner');
@@ -661,11 +719,16 @@ async function afterManual() {
   const w = winPed();
   if (w === undefined) { banner(); return; }
   const n = hist.length;
-  banner(`완성! 기둥 ${w + 1}에 ${fmt(cfg.target)}을(를) ${cfg.floors}층으로 쌓았어요 — ${n}번 이동. 최소 수 확인 중…`, 'ok');
+  let tt = '';
+  if (tState === 'done' && tReason === '완성') {
+    const prev = bestTime(tElapsed);
+    tt = ` · ${(tElapsed / 1000).toFixed(1)}초` + (prev && tElapsed < prev ? ` (최고 기록 경신! 이전 ${(prev / 1000).toFixed(1)}초)` : prev ? ` (최고 ${(prev / 1000).toFixed(1)}초)` : '');
+  }
+  banner(`완성! 기둥 ${w + 1}에 ${fmt(cfg.target)}을(를) ${cfg.floors}층으로 쌓았어요 — ${n}번 이동${tt}. 최소 수 확인 중…`, 'ok');
   const r = await getSolution().catch(() => null);
   if (!r || r.type !== 'done' || winPed() === undefined || hist.length !== n) return;
-  if (n === r.length) banner(`완성! ${n}번 — 최소 이동 수와 같아요. 최적 풀이입니다.`, 'ok');
-  else banner(`완성! ${n}번 이동했어요. 최소는 <b>${r.length}번</b>이에요. 오른쪽 아래 시뮬레이션으로 확인해 보세요.`, 'info');
+  if (n === r.length) banner(`완성! ${n}번${tt} — 최소 이동 수와 같아요. 최적 풀이입니다.`, 'ok');
+  else banner(`완성! ${n}번 이동${tt}. 최소는 <b>${r.length}번</b>이에요. 시뮬레이션으로 확인해 보세요.`, 'info');
 }
 
 /* ---------- solver ---------- */
@@ -699,14 +762,16 @@ async function judge(withAns) {
   const a = $('#ans').value.trim();
   if (withAns && (a === '' || isNaN(+a))) { v.innerHTML = '<span class="warn">먼저 최소 이동 수를 입력하세요.</span>'; $('#ans').focus(); return; }
   v.textContent = '';
+  const tMs = timerStop(withAns ? '답 제출' : '정답 확인');
   let r; try { r = await getSolution(); } catch (e) { return; }
   if (r.type !== 'done') { v.innerHTML = noSolText(r); setSolution(null); return; }
   const M = r.length; setSolution(r.moves);
   const capNote = r.capped ? '<br><span class="note">층수가 많아 조합을 일부만 확인했어요. 실제 최소는 이보다 적을 수 있어요.</span>' : '';
-  if (r.capped) { judgeOut(withAns, M, a, v); v.innerHTML += capNote; return; }
   judgeOut(withAns, M, a, v);
+  if (withAns && tMs !== null) v.innerHTML += `<br><span class="note">답 제출까지 ${(tMs / 1000).toFixed(1)}초</span>`;
+  if (r.capped) v.innerHTML += capNote;
 }
-function judgeOut(withAns, M, a, v) {
+function judgeOut(withAns, M, a, v, tMs) {
   if (!withAns) { v.innerHTML = `<span class="big">${M}</span>번이 최소 이동 수예요.`; return; }
   const n = +a;
   if (n === M) v.innerHTML = `<span class="big good">정답</span> 최소 <b>${M}번</b>이 맞아요.`;
@@ -722,9 +787,9 @@ function moveText(m) { return `기둥 ${m.s + 1} → 기둥 ${m.d + 1} · 위 ${
 function setSolution(moves) {
   solution = moves; simIdx = 0; playing = false; simMode = false;
   const ol = $('#moves'); ol.innerHTML = '';
-  ['#play', '#step', '#simReset'].forEach(s => $(s).disabled = !moves);
+  ['#play', '#step', '#simReset'].forEach(s => $(s).disabled = false);
   $('#play').textContent = '▶ 재생';
-  if (!moves) { $('#simNote').textContent = '채점이나 정답 보기를 하면 최소 수순이 여기에 나옵니다.'; return; }
+  if (!moves) { $('#simNote').textContent = '재생을 누르면 최소 수순을 계산해서 처음 배치부터 옮겨 보여줘요.'; return; }
   moves.forEach(m => { const li = document.createElement('li'); li.innerHTML = moveText(m); ol.append(li); });
   $('#simNote').textContent = moves.length ? '재생하면 처음 배치로 돌아가 최소 수순대로 옮깁니다.' : '처음 배치가 이미 완성 상태예요.';
 }
@@ -732,6 +797,7 @@ function markMoves(i) { [...$('#moves').children].forEach((li, j) => { li.classN
 async function simStart() { if (!simMode || hist.length !== simIdx) { stopSim(); resetBoard(); simIdx = 0; simMode = true; await wait(350); } }
 async function simStep() {
   if (busy || !solution) return;
+  timerStop('정답 확인');
   await simStart();
   if (simIdx >= solution.length) return;
   markMoves(simIdx);
@@ -739,10 +805,20 @@ async function simStep() {
   simIdx++; markMoves(simIdx);
   if (simIdx >= solution.length) { playing = false; $('#play').textContent = '▶ 재생'; banner(`시뮬레이션 완료 — ${solution.length}번 만에 목표 탑 완성.`, 'ok'); simMode = false; }
 }
-$('#step').onclick = () => { playing = false; $('#play').textContent = '▶ 재생'; simStep(); };
+// solution not computed yet (no grading / reveal) → compute it on demand
+async function ensureSolution() {
+  if (solution) return true;
+  let r; try { r = await getSolution(); } catch (e) { return false; }
+  if (r.type !== 'done') { $('#simNote').innerHTML = noSolText(r); return false; }
+  setSolution(r.moves);
+  $('#simNote').textContent = `최소 ${r.moves.length}번 풀이예요.` + (r.capped ? ' (층수가 많아 일부 조합만 확인)' : '');
+  return true;
+}
+$('#step').onclick = async () => { if (busy) return; playing = false; $('#play').textContent = '▶ 재생'; if (await ensureSolution()) simStep(); };
 $('#play').onclick = async () => {
   if (playing) { playing = false; $('#play').textContent = '▶ 재생'; return; }
-  if (!solution || busy) return;
+  if (busy) return;
+  if (!solution) { $('#play').disabled = true; const ok = await ensureSolution(); $('#play').disabled = false; if (!ok) return; }
   if (simMode && simIdx >= solution.length) simMode = false;
   playing = true; $('#play').textContent = '⏸ 일시정지';
   await simStart(); playing = true; $('#play').textContent = '⏸ 일시정지';
@@ -756,7 +832,8 @@ const maxFloors = () => 1 + blocks.filter(b => b.type !== 'num').length;
 const RAND_MAX_F = 8;
 function syncGoalUI() {
   $('#gTarget').value = cfg.target; $('#gFloors').value = cfg.floors; $('#gPrec').value = cfg.prec ? 'prec' : 'ltr';
-  $('#gTargetView').textContent = fmt(cfg.target); $('#gFloorsView').textContent = cfg.floors;
+  $('#gTimer').value = cfg.timer || 'button';
+  showTimer();
   const mf = maxFloors();
   $('#gFloors').max = mf; $('#rMin').max = Math.min(mf, RAND_MAX_F); $('#rMax').max = Math.min(mf, RAND_MAX_F);
   $('#rMin').value = cfg.rMin; $('#rMax').value = cfg.rMax;
@@ -775,7 +852,7 @@ function goalChanged() {
 }
 ['#gPed', '#gPrec'].forEach(s => $(s).addEventListener('change', goalChanged));
 $('#goalForm').addEventListener('submit', e => {
-  e.preventDefault(); goalChanged(); popGoal();
+  e.preventDefault(); goalChanged(); timerReset(); if (cfg.timer !== 'button') popGoal();
   $('#goalForm').hidden = true; $('#editGoal').setAttribute('aria-expanded', 'false'); $('#goalMsg').textContent = '';
 });
 $('#editGoal').onclick = () => {
@@ -839,7 +916,7 @@ function randomGoal() {
       cfg.target = vals[Math.floor(Math.random() * vals.length)]; cfg.floors = N;
       save(); syncGoalUI(); setSolution(null); $('#verdict').textContent = ''; $('#prog').textContent = ''; $('#ans').value = '';
       $('#goalForm').hidden = true; $('#editGoal').setAttribute('aria-expanded', 'false');
-      $('#goalMsg').textContent = ''; paint(); popGoal();
+      $('#goalMsg').textContent = ''; paint(); timerReset(); if (cfg.timer !== 'button') popGoal();
       return true;
     }
   }
@@ -864,11 +941,11 @@ function load(lines) {
   if (r.err) { $('#edMsg').innerHTML = `<span class="err"></span>`; $('#edMsg').firstChild.textContent = r.err; return false; }
   stopSim(); blocks = r.blocks; init = r.stacks; cur = init.map(s => s.slice()); hist = []; sel = null;
   edLines = lines.slice(); save(); syncGoalUI(); buildScene(); banner(); setSolution(null); $('#verdict').textContent = '';
-  $('#edMsg').textContent = '';
+  $('#edMsg').textContent = ''; timerReset();
   return true;
 }
 $('#apply').onclick = () => { const P = +$('#pCount').value; if (load(edLines.slice(0, P))) $('#edMsg').textContent = '새 배치로 시작했어요.'; };
-$('#photo').onclick = () => { $('#pCount').value = 4; edLines = PHOTO.slice(); renderEditor(); Object.assign(cfg, { target: 94, floors: 4, ped: 'any', prec: false }); load(edLines); popGoal(); };
+$('#photo').onclick = () => { $('#pCount').value = 4; edLines = PHOTO.slice(); renderEditor(); Object.assign(cfg, { target: 94, floors: 4, ped: 'any', prec: false }); load(edLines); if (cfg.timer !== 'button') popGoal(); };
 $('#rand').onclick = () => {
   if (busy) return;
   const P = +$('#pCount').value, ids = blocks.map((_, i) => i);
